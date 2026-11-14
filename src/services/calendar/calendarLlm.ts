@@ -1,9 +1,7 @@
 /**
  * LLM bridge for the Smart Calendar assistant — calls the PHP backend's
- * `ai_proxy` action (admin-configured OpenAI-compatible provider) with rich
- * Jalali context. Returns null on any failure so callers fall back to the
- * rule-based parser in calendarAi.ts. A user-provided personal key
- * (assistantAiSettings) is handled by the caller before this path.
+ * `ai_proxy` action (configured from the admin panel) with rich Jalali
+ * context. Returns null on any failure so callers show the offline message.
  */
 import { apiCall } from '@/lib/api';
 import type { Task, CalendarEvent, Holiday, MJalaliDate } from '@/types/calendar';

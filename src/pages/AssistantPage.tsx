@@ -215,31 +215,17 @@ export function AssistantPage() {
     [events, tasks, holidays, preferences, toggleTask],
   );
 
-  /** Offline/rule-based fallback — always available */
-  const processWithLocalParser = useCallback(
-    (text: string): Omit<ChatMessage, 'id'> => {
-      const result = calendarAi.parseUserIntent(text);
-      const intent = result.intent;
-
-      if (!result.needsConfirmation) {
-        const info = handleInfoIntent(intent);
-        if (info) return { role: 'assistant', content: info };
-      }
-
-      return {
-        role: 'assistant',
-        content: result.confirmationMessage ?? 'متوجه نشدم. لطفاً واضح‌تر بگو.',
-        intentData: result.needsConfirmation ? intent : null,
-        actions: result.needsConfirmation
-          ? [
-              { label: 'ثبت کن', type: 'confirm' as const },
-              { label: 'انصراف', type: 'cancel' as const },
-            ]
-          : [],
-      };
-    },
-    [handleInfoIntent],
-  );
+  /**
+   * Offline notice — the assistant answers only through the server LLM.
+   * When the AI service is unreachable there is no local fallback reply.
+   */
+  const offlineMessage: Omit<ChatMessage, 'id'> = {
+    role: 'assistant',
+    content:
+      '⚠️ دستیار در حال حاضر آفلاین است و نمی‌توانم پاسخ بدهم.\n\n' +
+      'برای فعال‌سازی دستیار، مدیر سیستم باید از «پنل مدیریت ← هوش مصنوعی» سرویس را تنظیم کند.\n' +
+      'ثبت دستی کارها و رویدادها از تب‌های «کارها» و «تقویم» همچنان در دسترس است.',
+  };
 
 
   const processUserInput = useCallback(
@@ -271,21 +257,16 @@ export function AssistantPage() {
 
       const llmResponse = await callLLM(contextMessages, tasks, events, holidays);
 
+      // Offline / unreachable AI: no local fallback reply, per product decision.
       if (!llmResponse) {
         setThinking(false);
-        pushMessage(processWithLocalParser(text));
+        pushMessage(offlineMessage);
         return;
       }
 
       if (isLLMError(llmResponse)) {
         setThinking(false);
-        const fallback = processWithLocalParser(text);
-        pushMessage({
-          role: 'assistant',
-          content: `${llmResponse.error}\n\nدر عین حال، از پردازش محلی استفاده می‌کنم.\n\n${fallback.content}`,
-          intentData: fallback.intentData,
-          actions: fallback.actions,
-        });
+        pushMessage(offlineMessage);
         return;
       }
 
@@ -327,7 +308,7 @@ export function AssistantPage() {
       setThinking(false);
       pushMessage({ role: 'assistant', content: llmResponse.reply });
     },
-    [messages, tasks, events, holidays, handleConfirm, handleInfoIntent, processWithLocalParser, clearActions, pushMessage],
+    [messages, tasks, events, holidays, handleConfirm, handleInfoIntent, clearActions, pushMessage],
   );
 
   const handleSend = useCallback(() => {

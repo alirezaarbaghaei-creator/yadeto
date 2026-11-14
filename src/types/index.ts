@@ -3,7 +3,6 @@ export type PageId =
   | 'calendar'
   | 'tasks'
   | 'assistant'
-  | 'more'
   | 'admin'
   | 'account'
   | 'pricing';

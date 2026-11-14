@@ -5,7 +5,6 @@ import {
   CalendarDays,
   ListTodo,
   MessageCircle,
-  MoreHorizontal,
   User,
   LogOut,
   Settings,
@@ -32,7 +31,6 @@ const baseNavItems: NavItem[] = [
   { id: 'calendar', label: 'تقویم', icon: CalendarDays },
   { id: 'tasks', label: 'کارها', icon: ListTodo },
   { id: 'assistant', label: 'دستیار', icon: MessageCircle },
-  { id: 'more', label: 'بیشتر', icon: MoreHorizontal },
 ];
 
 const accountNavItem: NavItem = { id: 'account', label: 'حساب کاربری', icon: Settings };

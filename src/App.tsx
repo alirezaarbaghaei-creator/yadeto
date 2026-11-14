@@ -7,7 +7,6 @@ import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { TasksPage } from '@/pages/TasksPage';
 import { AssistantPage } from '@/pages/AssistantPage';
-import { MorePage } from '@/pages/MorePage';
 import { AuthPage } from '@/pages/AuthPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { AccountPage } from '@/pages/AccountPage';
@@ -170,7 +169,6 @@ function AppShell() {
     calendar: <CalendarPage />,
     tasks: <TasksPage />,
     assistant: <AssistantPage />,
-    more: <MorePage />,
     admin: <AdminPage />,
     account: <AccountPage />,
     pricing: <PricingPage />,
