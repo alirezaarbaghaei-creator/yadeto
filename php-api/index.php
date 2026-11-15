@@ -1382,7 +1382,7 @@ try {
     }
     if ($act === 'admin_stats') {
         $counts = ['users' => 0, 'tasks' => 0, 'events' => 0];
-        $counts['users'] = (int)db()->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $counts['users'] = (int)db()->query("SELECT COUNT(*) FROM kateb_users")->fetchColumn();
         try { $counts['tasks'] = (int)db()->query("SELECT COUNT(*) FROM calendar_tasks")->fetchColumn(); } catch (Exception $e) {}
         try { $counts['events'] = (int)db()->query("SELECT COUNT(*) FROM calendar_events")->fetchColumn(); } catch (Exception $e) {}
         json_out(['data' => $counts]);

@@ -21,6 +21,7 @@ export function AdminPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const signOut = useAuthStore((s) => s.signOut);
 
   const loadStats = useCallback(async () => {
@@ -38,13 +39,23 @@ export function AdminPage() {
     setSettings(s);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await Promise.all([loadStats(), loadUsers(), loadSettings()]);
-      setLoading(false);
-    })();
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    // Never let one failing endpoint wedge the panel on the loader — collect
+    // all outcomes first, then surface a retryable error if every call failed.
+    const results = await Promise.allSettled([loadStats(), loadUsers(), loadSettings()]);
+    const failures = results.filter((r) => r.status === 'rejected');
+    if (failures.length === results.length) {
+      const first = failures[0] as PromiseRejectedResult;
+      setLoadError(first.reason instanceof Error ? first.reason.message : 'خطا در دریافت اطلاعات');
+    }
+    setLoading(false);
   }, [loadStats, loadUsers, loadSettings]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
 
   const tabs: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: 'stats', label: 'آمار', icon: BarChart3 },
@@ -61,6 +72,22 @@ export function AdminPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-red-100 bg-red-50 p-6 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-red-500" />
+        <p className="text-sm font-semibold text-red-700">بارگذاری پنل مدیریت ناموفق بود</p>
+        <p className="text-xs leading-6 text-red-500">{loadError}</p>
+        <button
+          onClick={() => void loadAll()}
+          className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+        >
+          تلاش مجدد
+        </button>
       </div>
     );
   }
