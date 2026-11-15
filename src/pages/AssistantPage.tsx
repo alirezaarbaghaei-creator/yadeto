@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Check, X, CalendarClock, MapPin } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Send, Sparkles, Check, X, CalendarClock, MapPin, Trash2, CalendarDays } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
+import { useAuthStore } from '@/store/authStore';
+import { AssistantOnboarding } from '@/components/calendar/AssistantOnboarding';
+import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
 import { calendarAi } from '@/services/calendar/calendarAi';
 import { findFreeSlots } from '@/services/calendar/schedulingEngine';
@@ -17,6 +20,7 @@ import {
   addJalaliDays,
   getStartOfWeek,
   getEndOfWeek,
+  isoDateToJalali,
 } from '@/utils/jalaliDate';
 
 interface ChatMessage {
@@ -28,8 +32,31 @@ interface ChatMessage {
   clarify?: ClarifyData | null;
 }
 
-let messageCounter = 0;
+let messageCounter = Date.now();
 const nextId = () => `msg-${messageCounter++}`;
+
+const CHAT_KEY = 'assistant_chat_v1';
+
+interface StoredChat { messages: ChatMessage[] }
+
+function loadStoredMessages(): ChatMessage[] {
+  try {
+    const raw = getStoredItem(CHAT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as StoredChat;
+    return Array.isArray(parsed.messages) ? parsed.messages : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(messages: ChatMessage[]): void {
+  try {
+    setStoredItem(CHAT_KEY, JSON.stringify({ messages } as StoredChat));
+  } catch {
+    /* storage full / unavailable — chat stays in memory only */
+  }
+}
 
 function intentDateToISO(dateStr: string): string | null {
   const parsed = parseJalali(dateStr);
@@ -37,6 +64,32 @@ function intentDateToISO(dateStr: string): string | null {
     return /^\d{4}-\d{2}-\d{2}/.test(dateStr) ? dateStr.slice(0, 10) : null;
   }
   return gregorianToISO(toGregorian(parsed.year, parsed.month, parsed.day));
+}
+
+function formatDayList(
+  j: { year: number; month: number; day: number },
+  tasks: import('@/types/calendar').Task[],
+  events: import('@/types/calendar').CalendarEvent[],
+  label: string,
+): string {
+  const iso = gregorianToISO(toGregorian(j.year, j.month, j.day));
+  const dayEvents = [...events.filter((e) => e.date === iso)].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const dayTasks = [...tasks.filter((t) => t.dueDate === iso && t.status !== 'completed')]
+    .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
+  let text = `برنامه ${label} (${formatJalali(j, 'long')}):
+
+`;
+  if (dayEvents.length === 0 && dayTasks.length === 0) {
+    text += 'هیچ برنامه‌ای ثبت نشده — روزت خالیه! 🎉';
+    return text.trim();
+  }
+  const items: { time: string; text: string }[] = [];
+  for (const e of dayEvents) items.push({ time: e.startTime, text: `رویداد: ${e.title}${e.location ? ` (${e.location})` : ''}` });
+  for (const t of dayTasks) items.push({ time: t.dueTime ?? '—', text: `کار: ${t.title}` });
+  items.sort((a, b) => a.time.localeCompare(b.time));
+  for (const it of items) text += `• ${toFaDigits(it.time)} — ${it.text}
+`;
+  return text.trim();
 }
 
 function buildGreeting(holidays: { title: string; gregorianDate: string; isOfficialHoliday: boolean }[]): string {
@@ -62,10 +115,19 @@ export function AssistantPage() {
   const addTask = useCalendarStore((s) => s.addTask);
   const addEvent = useCalendarStore((s) => s.addEvent);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
+  const deleteTask = useCalendarStore((s) => s.deleteTask);
+  const deleteEvent = useCalendarStore((s) => s.deleteEvent);
+  const updateTask = useCalendarStore((s) => s.updateTask);
+  const updatePreferences = useCalendarStore((s) => s.updatePreferences);
+  const user = useAuthStore((s) => s.user);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '0', role: 'assistant', content: buildGreeting(holidays) },
-  ]);
+  const needsOnboarding = !preferences?.onboarding;
+  const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const stored = loadStoredMessages();
+    if (stored.length > 0) return stored;
+    return [{ id: '0', role: 'assistant', content: buildGreeting([]) }];
+  });
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -75,8 +137,39 @@ export function AssistantPage() {
   }, [messages, thinking]);
 
   const pushMessage = useCallback((m: Omit<ChatMessage, 'id'>) => {
-    setMessages((prev) => [...prev, { ...m, id: nextId() }]);
+    setMessages((prev) => {
+      const next = [...prev, { ...m, id: nextId() }];
+      saveMessages(next);
+      return next;
+    });
   }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (result: import('@/components/calendar/AssistantOnboarding').AssistantOnboardingResult) => {
+      updatePreferences({
+        workStart: result.preferences.workStart,
+        workEnd: result.preferences.workEnd,
+        workDays: result.preferences.workDays,
+        defaultReminder: result.preferences.defaultReminder,
+        notificationsEnabled: result.preferences.notificationsEnabled,
+        onboarding: {
+          role: result.role,
+          jobTitle: result.jobTitle,
+          wakeTime: result.wakeTime,
+          sleepTime: result.sleepTime,
+          completedAt: new Date().toISOString(),
+        },
+      });
+      setShowOnboarding(false);
+      pushMessage({
+        role: 'assistant',
+        content: `عالی! با نقش «${result.jobTitle}» و ساعات کاری ${toFaDigits(result.preferences.workStart ?? '')} تا ${toFaDigits(result.preferences.workEnd ?? '')} شناختم.
+از این به بعد برنامه‌هات رو داخل همین بازه می‌چینم و یادآوری‌ها رو بیرون از ساعت خوابت نمی‌ذارم.
+هر چیزی تو ذهنت هست بگو — مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروزم چیه؟»`,
+      });
+    },
+    [updatePreferences, pushMessage],
+  );
 
   const clearActions = useCallback(() => {
     setMessages((prev) => prev.map((m) => (m.actions?.length ? { ...m, actions: [] } : m)));
@@ -136,9 +229,58 @@ export function AssistantPage() {
         return;
       }
 
+      if (action === 'delete_task') {
+        const id = (intentData.id as string) || '';
+        const target = tasks.find((t) => t.id === id || t.title === (intentData.title as string));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'کار مورد نظر رو پیدا نکردم. عنوان دقیق‌تر بگو.' });
+          return;
+        }
+        deleteTask(target.id);
+        pushMessage({ role: 'assistant', content: `✓ کار «${target.title}» حذف شد.` });
+        return;
+      }
+
+      if (action === 'delete_event') {
+        const id = (intentData.id as string) || '';
+        const target = events.find((e) => e.id === id || e.title === (intentData.title as string));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'رویداد مورد نظر رو پیدا نکردم. عنوان دقیق‌تر بگو.' });
+          return;
+        }
+        deleteEvent(target.id);
+        pushMessage({ role: 'assistant', content: `✓ رویداد «${target.title}» حذف شد.` });
+        return;
+      }
+
+      if (action === 'reschedule_task') {
+        const id = (intentData.id as string) || '';
+        const target = tasks.find((t) => t.id === id || t.title === (intentData.title as string));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'کار مورد نظر رو پیدا نکردم.' });
+          return;
+        }
+        const dateStr = (intentData.date as string) || target.dueDate;
+        const iso = intentDateToISO(dateStr);
+        if (!iso) {
+          pushMessage({ role: 'assistant', content: 'تاریخ جدید رو نتونستم بفهمم.' });
+          return;
+        }
+        updateTask(target.id, {
+          dueDate: iso,
+          dueTime: (intentData.time as string) || target.dueTime,
+        });
+        const d = parseJalali(iso.replace(/-/g, '/'));
+        pushMessage({
+          role: 'assistant',
+          content: `✓ «${target.title}» به ${d ? formatJalali(d, 'long') : iso}${intentData.time ? ` ساعت ${toFaDigits(intentData.time as string)}` : ''} منتقل شد.`,
+        });
+        return;
+      }
+
       pushMessage({ role: 'assistant', content: 'این عملیات هنوز پشتیبانی نمی‌شود.' });
     },
-    [addTask, addEvent, preferences, pushMessage],
+    [addTask, addEvent, toggleTask, deleteTask, deleteEvent, updateTask, tasks, events, preferences, pushMessage],
   );
 
 
@@ -255,7 +397,14 @@ export function AssistantPage() {
         { role: 'user' as const, content: text },
       ];
 
-      const llmResponse = await callLLM(contextMessages, tasks, events, holidays);
+      const llmResponse = await callLLM(contextMessages, tasks, events, holidays, {
+        preferences,
+        profile: {
+          fullName: user?.full_name,
+          jobTitle: preferences?.onboarding?.jobTitle,
+          organization: undefined,
+        },
+      });
 
       // Offline / unreachable AI: no local fallback reply, per product decision.
       if (!llmResponse) {
@@ -298,7 +447,7 @@ export function AssistantPage() {
         return;
       }
 
-      if (intent && ['find_free_time', 'show_today', 'summarize_week', 'show_upcoming', 'complete_task'].includes(intent.action)) {
+      if (intent && ['find_free_time', 'show_today', 'show_day', 'summarize_week', 'show_upcoming', 'complete_task'].includes(intent.action)) {
         const info = handleInfoIntent(intent);
         setThinking(false);
         pushMessage({ role: 'assistant', content: info ?? llmResponse.reply });
@@ -335,7 +484,14 @@ export function AssistantPage() {
   const quickPrompts = ['برنامه امروزم چیه؟', 'فردا ساعت ۱۰ جلسه دارم', 'این هفته چند کار انجام دادم؟'];
 
   return (
-    <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
+    <>
+      {showOnboarding && needsOnboarding && (
+        <AssistantOnboarding
+          onComplete={handleOnboardingComplete}
+          onSkip={() => setShowOnboarding(false)}
+        />
+      )}
+      <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 text-white">
           <Sparkles className="h-4 w-4" />
@@ -456,7 +612,7 @@ export function AssistantPage() {
         همگام‌سازی امن با حساب کاربری شما
         <CalendarClock className="h-3 w-3" />
       </p>
-    </div>
+      </div>
+    </>
   );
 }
-

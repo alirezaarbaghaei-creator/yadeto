@@ -51,11 +51,17 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         pullPreferences(user?.id ?? 'local'),
       ]);
 
+      // Merge prefs: server is authoritative for work hours, but local-only
+      // fields (assistant onboarding) must survive the pull.
+      const mergedPrefs = serverPrefs
+        ? { ...serverPrefs, onboarding: localPrefs.onboarding ?? serverPrefs.onboarding }
+        : localPrefs;
+
       set({
         tasks: cloud?.tasks ?? calendarDb.loadTasks(),
         events: cloud?.events ?? calendarDb.loadEvents(),
         holidays: calendarDb.loadHolidays(),
-        preferences: serverPrefs ?? localPrefs,
+        preferences: mergedPrefs,
         loaded: true,
         loading: false,
       });

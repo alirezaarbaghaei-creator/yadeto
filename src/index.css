@@ -96,7 +96,7 @@
 }
 
 .hero-workflow::after {
-  content: '۱  انتخاب قالب    ←    ۲  نوشتن درخواست    ←    ۳  مکتوب آماده';
+  content: '۱  ثبت کار و رویداد    ←    ۲  یادآوری هوشمند    ←    ۳  برنامه منظم';
   position: absolute;
   left: 32px;
   bottom: 24px;

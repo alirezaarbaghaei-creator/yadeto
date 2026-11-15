@@ -69,6 +69,15 @@ export interface Holiday {
   description?: string;
 }
 
+export interface AssistantProfile {
+  /** free-form role from the onboarding questionnaire */
+  role: string;
+  jobTitle: string;
+  wakeTime: string;
+  sleepTime: string;
+  completedAt: string;
+}
+
 export interface UserPreferences {
   id?: string;
   userId: string;
@@ -80,6 +89,8 @@ export interface UserPreferences {
   workDays: number[];
   defaultReminder: number;
   notificationsEnabled: boolean;
+  /** assistant onboarding questionnaire result (kept locally) */
+  onboarding?: AssistantProfile;
 }
 
 export interface AISettings {

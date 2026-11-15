@@ -439,6 +439,52 @@ function j_decode(string $v, $default = null) {
     return $d !== null ? $d : ($default ?? []);
 }
 
+// ─── Web search helper (for the assistant tool loop) ─────────
+// Uses DuckDuckGo HTML lite endpoint — no API key required, returns compact
+// text snippets suitable for feeding back into the LLM context.
+function web_search(string $query): string {
+    $query = trim($query);
+    if ($query === '') return 'عبارت جستجو خالی بود.';
+    $url = 'https://html.duckduckgo.com/html/?q=' . urlencode($query);
+    $results = '';
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_ENCODING => 'gzip, deflate',
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ]);
+        $html = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($html === false) return 'خطا در جستجو: ' . $err;
+    } else {
+        $ctx = stream_context_create(['http' => ['timeout' => 15, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $html = @file_get_contents($url, false, $ctx);
+        if ($html === false) return 'جستجو در دسترس نیست.';
+    }
+
+    // Parse result titles + snippets from the HTML lite endpoint
+    if (preg_match_all('/<a[^>]*class="result__a"[^>]*>(.*?)<\/a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/s', $html, $m, PREG_SET_ORDER)) {
+        $items = [];
+        foreach (array_slice($m, 0, 5) as $i => $row) {
+            $title = trim(strip_tags(html_entity_decode($row[1], ENT_QUOTES, 'UTF-8')));
+            $snippet = trim(strip_tags(html_entity_decode($row[2], ENT_QUOTES, 'UTF-8')));
+            if ($title === '' && $snippet === '') continue;
+            $items[] = ($i + 1) . '. ' . $title . ($snippet !== '' ? ' — ' . $snippet : '');
+        }
+        $results = implode("\n", $items);
+    }
+    if (trim($results) === '') return 'نتیجه‌ای برای این جستجو پیدا نشد. پاسخ را بر اساس دانش خودت بده و بگو که به‌روزرسانی آنلاین ممکن نبود.';
+    return "نتایج وب برای «{$query}»:\n" . $results;
+}
+
 // ─── HTTP fetch helper ────────────────────────────────────────
 function http_post_json(string $url, array $body, array $headers = []): array {
     $payload = json_encode($body, JSON_UNESCAPED_UNICODE);
@@ -514,38 +560,101 @@ try {
         $messages = $b['messages'] ?? [];
         $temperature = $b['temperature'] ?? 0.7;
         $maxTokens = $b['max_tokens'] ?? 2000;
+        $allowTools = !empty($b['allow_tools']);
+
+        // Tool loop: the model may request a web_search tool call (up to N rounds).
+        // This lets the assistant answer real-world questions ("بازی بعدی پرسپولیس")
+        // by searching the web, then continue planning with the result.
+        $tools = $allowTools ? [
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'web_search',
+                    'description' => 'جستجو در وب برای اطلاعات به‌روز (نتایج مسابقات، مناسبت‌ها، قیمت‌ها و...). پارامتر query را به فارسی یا انگلیسی بفرست.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'query' => ['type' => 'string', 'description' => 'عبارت جستجو'],
+                        ],
+                        'required' => ['query'],
+                    ],
+                ],
+            ],
+        ] : null;
 
         $endpoint = $aiUrl . '/chat/completions';
-        $payload = [
-            'model' => $model,
-            'messages' => $messages,
-            'temperature' => $temperature,
-            'max_tokens' => (int)$maxTokens,
-        ];
-
-        $result = http_post_json($endpoint, $payload, [
-            "Authorization: Bearer {$aiKey}",
-        ]);
-        if ($result['error']) {
-            json_error('خطا در ارتباط با سرور هوش مصنوعی: ' . $result['error'], 502);
-        }
-        if ($result['code'] >= 400) {
-            $detail = substr($result['raw'] ?? '', 0, 500);
-            json_error("AI API error {$result['code']}: {$detail}", 502);
-        }
-        if ($result['body'] === null) {
-            json_error('پاسخ هوش مصنوعی خالی است', 502);
-        }
-
-        // Some Parspack reasoning models return content in reasoning field instead of content
-        $body = $result['body'];
-        if (isset($body['choices'][0]['message'])) {
-            $msg = $body['choices'][0]['message'];
-            if (empty($msg['content']) && !empty($msg['reasoning'])) {
-                $body['choices'][0]['message']['content'] = $msg['reasoning'];
+        $rounds = 0;
+        $MAX_TOOL_ROUNDS = 3;
+        while (true) {
+            $payload = [
+                'model' => $model,
+                'messages' => $messages,
+                'temperature' => $temperature,
+                'max_tokens' => (int)$maxTokens,
+            ];
+            if ($tools !== null) {
+                $payload['tools'] = $tools;
             }
+
+            $result = http_post_json($endpoint, $payload, [
+                "Authorization: Bearer {$aiKey}",
+            ]);
+            if ($result['error']) {
+                json_error('خطا در ارتباط با سرور هوش مصنوعی: ' . $result['error'], 502);
+            }
+            if ($result['code'] >= 400) {
+                // Some providers reject the tools field — retry once without it.
+                if ($tools !== null && $result['code'] === 400) {
+                    $tools = null;
+                    $allowTools = false;
+                    continue;
+                }
+                $detail = substr($result['raw'] ?? '', 0, 500);
+                json_error("AI API error {$result['code']}: {$detail}", 502);
+            }
+            if ($result['body'] === null) {
+                json_error('پاسخ هوش مصنوعی خالی است', 502);
+            }
+
+            $body = $result['body'];
+            if (isset($body['choices'][0]['message'])) {
+                $msg = $body['choices'][0]['message'];
+                if (empty($msg['content']) && !empty($msg['reasoning'])) {
+                    $body['choices'][0]['message']['content'] = $msg['reasoning'];
+                }
+            }
+
+            // Check for tool_calls in the response
+            $toolCalls = $body['choices'][0]['message']['tool_calls'] ?? null;
+            if ($allowTools && $toolCalls && $rounds < $MAX_TOOL_ROUNDS) {
+                $rounds++;
+                // Append the assistant message (with tool_calls) to the conversation
+                $messages[] = $body['choices'][0]['message'];
+                foreach ($toolCalls as $tc) {
+                    $fnName = $tc['function']['name'] ?? '';
+                    $fnArgsRaw = $tc['function']['arguments'] ?? '{}';
+                    $fnArgs = json_decode($fnArgsRaw, true) ?: [];
+                    if ($fnName === 'web_search') {
+                        $query = trim((string)($fnArgs['query'] ?? ''));
+                        $searchResult = web_search($query);
+                        $messages[] = [
+                            'role' => 'tool',
+                            'tool_call_id' => $tc['id'] ?? ('call_' . $rounds),
+                            'content' => $searchResult,
+                        ];
+                    } else {
+                        $messages[] = [
+                            'role' => 'tool',
+                            'tool_call_id' => $tc['id'] ?? ('call_' . $rounds),
+                            'content' => 'ابزار ناشناخته: ' . $fnName,
+                        ];
+                    }
+                }
+                continue; // feed results back to the model for the next round
+            }
+
+            json_out($body);
         }
-        json_out($body);
     }
 
     // ─── AI Test (admin only) ────────────────────────────────

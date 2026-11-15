@@ -84,7 +84,7 @@ export function CalendarPage() {
           });
         }}
         hasItems={hasItems}
-        isHoliday={(iso) => holidays.some((h) => h.gregorianDate === iso)}
+        isHoliday={(iso) => holidays.some((h) => h.gregorianDate === iso && h.isOfficialHoliday)}
       />
 
       {/* Selected day header */}

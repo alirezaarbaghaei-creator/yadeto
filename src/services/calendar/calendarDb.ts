@@ -319,6 +319,9 @@ const prefsToRow = (p: UserPreferences): Record<string, unknown> => ({
   work_days: p.workDays,
   default_reminder: p.defaultReminder,
   notifications_enabled: p.notificationsEnabled,
+  // onboarding travels as JSON inside prefs (stored in the work_days-like TEXT
+  // column when the server row supports it; ignored otherwise)
+  onboarding: p.onboarding ?? null,
 });
 
 const rowToPrefs = (saved: Partial<UserPreferences> | Record<string, unknown> | null, userId: string): UserPreferences => {
@@ -334,6 +337,7 @@ const rowToPrefs = (saved: Partial<UserPreferences> | Record<string, unknown> | 
     workDays: (s.workDays ?? s.work_days ?? base.workDays) as number[],
     defaultReminder: Number(s.defaultReminder ?? s.default_reminder ?? base.defaultReminder),
     notificationsEnabled: Boolean(s.notificationsEnabled ?? s.notifications_enabled ?? base.notificationsEnabled),
+    onboarding: (s.onboarding as import('@/types/calendar').AssistantProfile | undefined) ?? base.onboarding,
   };
 };
 
