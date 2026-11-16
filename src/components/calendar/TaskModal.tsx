@@ -38,11 +38,21 @@ const RECURRENCES: { value: RecurrenceType; label: string }[] = [
 ];
 
 
+const HOURS24 = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? '00' : '30';
+  return `${String(h).padStart(2, '0')}:${m}`;
+});
+
+const selectCls =
+  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus-ring cursor-pointer';
+
 export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [selectedJalali, setSelectedJalali] = useState<MJalaliDate>(getTodayJalali());
   const [hasTime, setHasTime] = useState(false);
   const [time, setTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('11:00');
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState<TaskCategory>('other');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
@@ -60,6 +70,7 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
       setTime('10:00');
       setHasTime(false);
     }
+    setEndTime('11:00');
     setPriority(task?.priority || 'medium');
     setCategory(task?.category || 'other');
     setRecurrence(task?.recurrence || 'none');
@@ -74,6 +85,9 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
       title: title.trim(),
       dueDate: toISO(selectedJalali),
       dueTime: hasTime ? time : undefined,
+      duration: hasTime ? Math.max(15, Math.round(
+        ((new Date(`2000-01-01T${endTime}:00`).getTime() - new Date(`2000-01-01T${time}:00`).getTime()) / 60000)
+      )) || 60 : undefined,
       priority,
       category,
       recurrence,
@@ -173,14 +187,18 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
               </button>
             </div>
             {hasTime && (
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-                <Clock className="h-4 w-4 text-indigo-500" />
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="flex-1 bg-transparent text-sm text-slate-700 focus:outline-none"
-                />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 shrink-0 text-indigo-500" />
+                  <select value={time} onChange={(e) => setTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت شروع">
+                    {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <span className="text-xs text-slate-400">تا</span>
+                  <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت پایان">
+                    {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <p className="text-[10px] text-slate-400">فرمت ۲۴ ساعته — بازه انجام کار</p>
               </div>
             )}
           </div>

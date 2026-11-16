@@ -23,6 +23,15 @@ const CATEGORIES: { value: TaskCategory; label: string }[] = [
   { value: 'other', label: 'سایر' },
 ];
 
+const HOURS24 = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? '00' : '30';
+  return `${String(h).padStart(2, '0')}:${m}`;
+});
+
+const selectCls =
+  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus-ring cursor-pointer';
+
 const COLORS: { value: string; label: string }[] = [
   { value: '#4f46e5', label: 'بنفش' },
   { value: '#0ea5e9', label: 'آبی' },
@@ -158,14 +167,11 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs text-slate-500">ساعت شروع</label>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <Clock className="h-4 w-4 text-indigo-500" />
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-transparent text-sm text-slate-700 focus:outline-none"
-                />
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 shrink-0 text-indigo-500" />
+                <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت شروع">
+                  {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
               </div>
             </div>
             <div>
@@ -183,16 +189,17 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                 </button>
               </div>
               {hasEndTime ? (
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 focus:outline-none"
-                />
+                <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت پایان">
+                  {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-2.5 text-center text-xs text-slate-300">
-                  —
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setHasEndTime(true)}
+                  className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-center text-xs text-slate-400 hover:border-indigo-300 hover:text-indigo-500"
+                >
+                  افزودن ساعت پایان
+                </button>
               )}
             </div>
           </div>

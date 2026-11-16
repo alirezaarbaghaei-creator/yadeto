@@ -8,7 +8,7 @@ import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calen
 import { calendarAi } from '@/services/calendar/calendarAi';
 import { findFreeSlots } from '@/services/calendar/schedulingEngine';
 import { scheduleTaskReminder } from '@/services/calendar/notifications';
-import type { AIIntent } from '@/types/calendar';
+import type { AIIntent, UserPreferences } from '@/types/calendar';
 import {
   getTodayJalali,
   formatJalali,
@@ -145,25 +145,19 @@ export function AssistantPage() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (result: import('@/components/calendar/AssistantOnboarding').AssistantOnboardingResult) => {
+    (result: { profile: import('@/types/calendar').AssistantProfile; preferences: Partial<UserPreferences> }) => {
       updatePreferences({
         workStart: result.preferences.workStart,
         workEnd: result.preferences.workEnd,
         workDays: result.preferences.workDays,
         defaultReminder: result.preferences.defaultReminder,
         notificationsEnabled: result.preferences.notificationsEnabled,
-        onboarding: {
-          role: result.role,
-          jobTitle: result.jobTitle,
-          wakeTime: result.wakeTime,
-          sleepTime: result.sleepTime,
-          completedAt: new Date().toISOString(),
-        },
+        onboarding: result.profile,
       });
       setShowOnboarding(false);
       pushMessage({
         role: 'assistant',
-        content: `عالی! با نقش «${result.jobTitle}» و ساعات کاری ${toFaDigits(result.preferences.workStart ?? '')} تا ${toFaDigits(result.preferences.workEnd ?? '')} شناختم.
+        content: `عالی! با نقش «${result.profile.jobTitle}» و ساعات کاری ${toFaDigits(result.preferences.workStart ?? '')} تا ${toFaDigits(result.preferences.workEnd ?? '')} شناختم.
 از این به بعد برنامه‌هات رو داخل همین بازه می‌چینم و یادآوری‌ها رو بیرون از ساعت خوابت نمی‌ذارم.
 هر چیزی تو ذهنت هست بگو — مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروزم چیه؟»`,
       });
@@ -487,6 +481,7 @@ export function AssistantPage() {
     <>
       {showOnboarding && needsOnboarding && (
         <AssistantOnboarding
+          userName={user?.full_name}
           onComplete={handleOnboardingComplete}
           onSkip={() => setShowOnboarding(false)}
         />
