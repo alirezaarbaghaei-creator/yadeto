@@ -458,7 +458,6 @@ export function AssistantPage() {
     'فردا ساعت ۱۰ جلسه دارم',
     'یادم بنداز پنجشنبه قبض رو بپردازم',
     'هفته پیش رو چه زمانی آزادم؟',
-    'بازی بعدی پرسپولیس کیه؟',
     'چه تاریخی برای مسافرت خوبه؟',
   ];
 
@@ -538,7 +537,7 @@ export function AssistantPage() {
       </div>
 
       {/* Quick prompts (only at start) */}
-      {(messages.length <= 1 || true) && (
+      {messages.length <= 1 && (
         <div className="flex flex-wrap justify-end gap-2 pb-2">
           {quickPrompts.map((q) => (
             <button
