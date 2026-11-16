@@ -14,7 +14,7 @@ import {
 import { useAppStore } from '@/store/appStore';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useAuthStore } from '@/store/authStore';
-import { getTodaySchedule, formatFreeTime } from '@/services/calendar/schedulingEngine';
+import { getTodaySchedule, formatFreeTime, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { calendarAi } from '@/services/calendar/calendarAi';
 import { TaskCard } from '@/components/calendar/TaskCard';
 import { TaskModal } from '@/components/calendar/TaskModal';
@@ -61,13 +61,14 @@ export function Dashboard() {
   const prefs = preferences;
   const greetingName = user?.full_name ? user.full_name.split(' ')[0] : null;
 
+  const visibleToday = useMemo(() => getVisibleTasksForDate(tasks, todayISO), [tasks, todayISO]);
   const schedule = useMemo(
-    () => getTodaySchedule(events, tasks, prefs?.workStart ?? '08:00', prefs?.workEnd ?? '20:00'),
-    [events, tasks, prefs],
+    () => getTodaySchedule(events, visibleToday, prefs?.workStart ?? '08:00', prefs?.workEnd ?? '20:00'),
+    [events, visibleToday, prefs],
   );
 
   const todayTasks = useMemo(
-    () => tasks.filter((t) => t.dueDate === todayISO && t.status === 'pending'),
+    () => getVisibleTasksForDate(tasks, todayISO).filter((t) => t.status === 'pending'),
     [tasks, todayISO],
   );
 

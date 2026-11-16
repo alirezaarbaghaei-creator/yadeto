@@ -6,7 +6,7 @@ import { AssistantOnboarding } from '@/components/calendar/AssistantOnboarding';
 import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
 import { calendarAi } from '@/services/calendar/calendarAi';
-import { findFreeSlots } from '@/services/calendar/schedulingEngine';
+import { findFreeSlots, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { scheduleTaskReminder } from '@/services/calendar/notifications';
 import type { AIIntent, UserPreferences } from '@/types/calendar';
 import {
@@ -74,7 +74,7 @@ function formatDayList(
 ): string {
   const iso = gregorianToISO(toGregorian(j.year, j.month, j.day));
   const dayEvents = [...events.filter((e) => e.date === iso)].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const dayTasks = [...tasks.filter((t) => t.dueDate === iso && t.status !== 'completed')]
+  const dayTasks = [...getVisibleTasksForDate(tasks, iso).filter((t) => t.status !== 'completed')]
     .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
   let text = `برنامه ${label} (${formatJalali(j, 'long')}):
 

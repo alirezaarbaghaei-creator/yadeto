@@ -208,3 +208,55 @@ export function formatFreeTime(minutes: number): string {
   return `${toFaDigits(mins)} دقیقه`;
 }
 
+
+// ─── Recurrence expansion ─────────────────────────────────────
+import type { RecurrenceType } from '@/types/calendar';
+
+/**
+ * Expands a recurring task into a virtual instance for `targetISO`.
+ * The task itself lives on its origin dueDate; daily/weekly/monthly/yearly
+ * recurrences produce a display copy on matching later dates.
+ * Returns the task (same id/fields) when it recurs on the target date,
+ * or null when it doesn't.
+ */
+export function expandRecurringTask(
+  task: Task,
+  targetISO: string,
+): Task | null {
+  if (task.recurrence === 'none' || task.recurrence === undefined) return null;
+  if (targetISO < task.dueDate) return null;
+  if (targetISO === task.dueDate) return task;
+
+  const diffDays = Math.round(
+    (new Date(targetISO + 'T00:00:00').getTime() - new Date(task.dueDate + 'T00:00:00').getTime()) / 86400000,
+  );
+  const t = new Date(task.dueDate + 'T00:00:00');
+  const target = new Date(targetISO + 'T00:00:00');
+
+  switch (task.recurrence) {
+    case 'daily':
+      return task;
+    case 'weekly':
+      return diffDays % 7 === 0 ? task : null;
+    case 'monthly':
+      // same day-of-month
+      return t.getDate() === target.getDate() ? task : null;
+    case 'yearly':
+      return t.getMonth() === target.getMonth() && t.getDate() === target.getDate() ? task : null;
+    default:
+      return null;
+  }
+}
+
+/** All tasks visible on targetISO: real items + recurring virtual instances. */
+export function getVisibleTasksForDate(
+  allTasks: Task[],
+  targetISO: string,
+): Task[] {
+  const real = allTasks.filter((t) => t.dueDate === targetISO);
+  const recurring = allTasks
+    .filter((t) => t.dueDate !== targetISO)
+    .map((t) => expandRecurringTask(t, targetISO))
+    .filter((t): t is Task => t !== null);
+  return [...real, ...recurring];
+}

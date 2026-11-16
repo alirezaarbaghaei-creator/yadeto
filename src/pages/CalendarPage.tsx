@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, PartyPopper } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { MiniCalendar, toISO } from '@/components/calendar/MiniCalendar';
+import { getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { TaskCard } from '@/components/calendar/TaskCard';
 import { EventCard } from '@/components/calendar/EventCard';
 import { TaskModal } from '@/components/calendar/TaskModal';
@@ -44,13 +45,13 @@ export function CalendarPage() {
 
   const hasItems = useCallback(
     (iso: string) =>
-      events.some((e) => e.date === iso) || tasks.some((t) => t.dueDate === iso),
+      events.some((e) => e.date === iso) || getVisibleTasksForDate(tasks, iso).length > 0,
     [events, tasks],
   );
 
   const selectedHoliday = useMemo(() => getHolidayForDate(selected), [selected, getHolidayForDate]);
   const dayEvents = useMemo(() => events.filter((e) => e.date === selectedISO), [events, selectedISO]);
-  const dayTasks = useMemo(() => tasks.filter((t) => t.dueDate === selectedISO), [tasks, selectedISO]);
+  const dayTasks = useMemo(() => getVisibleTasksForDate(tasks, selectedISO), [tasks, selectedISO]);
 
   const selectedGregorian = useMemo(() => formatGregorian(getGregorianForJalali(selected)), [selected]);
   const selectedHijri = useMemo(() => {

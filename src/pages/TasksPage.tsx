@@ -5,6 +5,7 @@ import { useCalendarStore } from '@/store/calendarStore';
 import { TaskCard } from '@/components/calendar/TaskCard';
 import { TaskModal } from '@/components/calendar/TaskModal';
 import { getTodayISO, dateToJalali, formatJalali, toFaDigits } from '@/utils/jalaliDate';
+import { getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import type { Task } from '@/types/calendar';
 
 type TabKey = 'today' | 'upcoming' | 'completed';
@@ -22,7 +23,7 @@ export function TasksPage() {
 
   const filteredTasks = useMemo(() => {
     if (activeTab === 'today') {
-      return tasks.filter((t) => t.dueDate === todayISO && t.status === 'pending');
+      return getVisibleTasksForDate(tasks, todayISO).filter((t) => t.status === 'pending');
     }
     if (activeTab === 'upcoming') {
       return tasks
@@ -36,7 +37,7 @@ export function TasksPage() {
     {
       key: 'today',
       label: 'امروز',
-      count: tasks.filter((t) => t.dueDate === todayISO && t.status === 'pending').length,
+      count: getVisibleTasksForDate(tasks, todayISO).filter((t) => t.status === 'pending').length,
     },
     {
       key: 'upcoming',
