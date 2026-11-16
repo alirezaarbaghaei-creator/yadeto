@@ -1,4 +1,4 @@
-import { Clock, MapPin, Trash2 } from 'lucide-react';
+import { Clock, MapPin, Trash2, Pencil } from 'lucide-react';
 import type { CalendarEvent } from '@/types/calendar';
 import { toFaDigits } from '@/utils/jalaliDate';
 
@@ -16,9 +16,10 @@ interface EventCardProps {
   event: CalendarEvent;
   compact?: boolean;
   onDelete?: (id: string) => void;
+  onEdit?: (event: CalendarEvent) => void;
 }
 
-export function EventCard({ event, compact, onDelete }: EventCardProps) {
+export function EventCard({ event, compact, onDelete, onEdit }: EventCardProps) {
   const eventColor = event.color || CATEGORY_COLORS[event.category] || '#3157D5';
 
   return (
@@ -46,13 +47,24 @@ export function EventCard({ event, compact, onDelete }: EventCardProps) {
           </div>
         </div>
         {onDelete && !compact && (
-          <button
-            onClick={() => onDelete(event.id)}
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-            aria-label="حذف رویداد"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(event)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-500"
+                aria-label="ویرایش رویداد"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(event.id)}
+              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+              aria-label="حذف رویداد"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Check, Clock, Trash2, SkipForward, Repeat } from 'lucide-react';
+import { Check, Clock, Trash2, SkipForward, Repeat, Pencil } from 'lucide-react';
 import type { Task } from '@/types/calendar';
 import { toFaDigits } from '@/utils/jalaliDate';
 
@@ -20,9 +20,10 @@ interface TaskCardProps {
   onToggle: (task: Task) => void;
   onDelete: (id: string) => void;
   onSkip?: (id: string) => void;
+  onEdit?: (task: Task) => void;
 }
 
-export function TaskCard({ task, onToggle, onDelete, onSkip }: TaskCardProps) {
+export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardProps) {
   const isCompleted = task.status === 'completed';
   const priority = PRIORITY_STYLES[task.priority];
 
@@ -71,6 +72,15 @@ export function TaskCard({ task, onToggle, onDelete, onSkip }: TaskCardProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {onEdit && (
+          <button
+            onClick={() => onEdit(task)}
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-500"
+            aria-label="ویرایش کار"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
         {onSkip && task.status === 'pending' && (
           <button
             onClick={() => onSkip(task.id)}

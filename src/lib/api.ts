@@ -5,7 +5,7 @@
 
 import { getItem, setItem, removeItem } from './safeStorage';
 
-const DEFAULT_API_URL = 'https://app.kateb.site/api/index.php';
+const DEFAULT_API_URL = 'https://app.yadeto.site/api/index.php';
 const STORAGE_KEY = 'kateb_api_url';
 
 function getApiUrl(): string {
@@ -304,7 +304,7 @@ export interface CoinPackage {
 
 const ZARINPAL_CALLBACK_URL =
   import.meta.env.VITE_ZARINPAL_CALLBACK_URL ||
-  'https://app.kateb.site/payment/callback';
+  'https://app.yadeto.site/payment/callback';
 
 export async function coinPackagesApi(): Promise<CoinPackage[]> {
   return apiCall('coin_packages').then((d) => d.data ?? []);

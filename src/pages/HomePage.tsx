@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Sparkles, Plus, Clock, ListTodo, CalendarDays, Coffee } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
+import type { Task } from '@/types/calendar';
 import { getTodaySchedule, formatFreeTime, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { calendarAi } from '@/services/calendar/calendarAi';
 import { TaskCard } from '@/components/calendar/TaskCard';
@@ -13,10 +14,12 @@ export function HomePage() {
   const events = useCalendarStore((s) => s.events);
   const preferences = useCalendarStore((s) => s.preferences);
   const addTask = useCalendarStore((s) => s.addTask);
+  const updateTask = useCalendarStore((s) => s.updateTask);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const skipTask = useCalendarStore((s) => s.skipTask);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const today = getTodayJalali();
   const todayISO = getTodayISO();
@@ -161,13 +164,23 @@ export function HomePage() {
                 onToggle={(t) => toggleTask(t.id)}
                 onDelete={deleteTask}
                 onSkip={skipTask}
+                onEdit={(t) => { setEditingTask(t); setModalOpen(true); }}
               />
             ))}
           </div>
         )}
       </motion.section>
 
-      <TaskModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={addTask} defaultDate={todayISO} />
+      <TaskModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingTask(null); }}
+        onSave={(t) => {
+          if (editingTask) updateTask(editingTask.id, t);
+          else addTask(t);
+        }}
+        task={editingTask}
+        defaultDate={todayISO}
+      />
     </div>
   );
 }

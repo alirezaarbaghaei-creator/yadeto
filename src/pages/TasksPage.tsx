@@ -13,11 +13,13 @@ type TabKey = 'today' | 'upcoming' | 'completed';
 export function TasksPage() {
   const tasks = useCalendarStore((s) => s.tasks);
   const addTask = useCalendarStore((s) => s.addTask);
+  const updateTask = useCalendarStore((s) => s.updateTask);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const skipTask = useCalendarStore((s) => s.skipTask);
   const [activeTab, setActiveTab] = useState<TabKey>('today');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayISO = getTodayISO();
 
@@ -57,7 +59,7 @@ export function TasksPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-800">کارها</h2>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => { setEditingTask(null); setModalOpen(true); }}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 transition-colors hover:bg-indigo-700"
           aria-label="افزودن کار"
         >
@@ -128,13 +130,23 @@ export function TasksPage() {
                 onToggle={(t) => toggleTask(t.id)}
                 onDelete={deleteTask}
                 onSkip={skipTask}
+                onEdit={(t) => { setEditingTask(t); setModalOpen(true); }}
               />
             </motion.div>
           ))
         )}
       </motion.div>
 
-      <TaskModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={addTask} defaultDate={todayISO} />
+      <TaskModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingTask(null); }}
+        onSave={(t) => {
+          if (editingTask) updateTask(editingTask.id, t);
+          else addTask(t);
+        }}
+        task={editingTask}
+        defaultDate={todayISO}
+      />
     </div>
   );
 }

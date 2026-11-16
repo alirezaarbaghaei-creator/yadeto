@@ -7,7 +7,8 @@ import { getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { TaskCard } from '@/components/calendar/TaskCard';
 import { EventCard } from '@/components/calendar/EventCard';
 import { TaskModal } from '@/components/calendar/TaskModal';
-import type { MJalaliDate } from '@/types/calendar';
+import type { MJalaliDate, Task, CalendarEvent } from '@/types/calendar';
+import { EventModal } from '@/components/calendar/EventModal';
 import {
   getTodayJalali,
   formatJalali,
@@ -24,14 +25,20 @@ export function CalendarPage() {
   const events = useCalendarStore((s) => s.events);
   const holidays = useCalendarStore((s) => s.holidays);
   const addTask = useCalendarStore((s) => s.addTask);
+  const addEvent = useCalendarStore((s) => s.addEvent);
+  const updateTask = useCalendarStore((s) => s.updateTask);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
+  const updateEvent = useCalendarStore((s) => s.updateEvent);
 
   const today = getTodayJalali();
   const [view, setView] = useState<MJalaliDate>({ year: today.year, month: today.month, day: 1 });
   const [selected, setSelected] = useState<MJalaliDate>(today);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const selectedISO = toISO(selected);
 
@@ -131,7 +138,12 @@ export function CalendarPage() {
         ) : (
           <>
             {dayEvents.map((event) => (
-              <EventCard key={event.id} event={event} onDelete={deleteEvent} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onDelete={deleteEvent}
+                onEdit={(e) => { setEditingEvent(e); setEventModalOpen(true); }}
+              />
             ))}
             {dayTasks.map((task) => (
               <TaskCard
@@ -139,6 +151,7 @@ export function CalendarPage() {
                 task={task}
                 onToggle={(t) => toggleTask(t.id)}
                 onDelete={deleteTask}
+                onEdit={(t) => { setEditingTask(t); setModalOpen(true); }}
               />
             ))}
           </>
@@ -147,8 +160,22 @@ export function CalendarPage() {
 
       <TaskModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={addTask}
+        onClose={() => { setModalOpen(false); setEditingTask(null); }}
+        onSave={(t) => {
+          if (editingTask) updateTask(editingTask.id, t);
+          else addTask(t);
+        }}
+        task={editingTask}
+        defaultDate={selectedISO}
+      />
+      <EventModal
+        open={eventModalOpen}
+        onClose={() => { setEventModalOpen(false); setEditingEvent(null); }}
+        onSave={(e) => {
+          if (editingEvent) updateEvent(editingEvent.id, e);
+          else addEvent(e);
+        }}
+        event={editingEvent}
         defaultDate={selectedISO}
       />
     </div>

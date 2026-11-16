@@ -29,7 +29,7 @@ import {
   getGregorianForJalali,
   formatGregorian,
 } from '@/utils/jalaliDate';
-import type { CalendarEvent } from '@/types/calendar';
+import type { CalendarEvent, Task } from '@/types/calendar';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -53,8 +53,12 @@ export function Dashboard() {
   const skipTask = useCalendarStore((s) => s.skipTask);
   const user = useAuthStore((s) => s.user);
 
+  const updateTask = useCalendarStore((s) => s.updateTask);
+  const updateEvent = useCalendarStore((s) => s.updateEvent);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const today = getTodayJalali();
   const todayISO = getTodayISO();
@@ -130,7 +134,7 @@ export function Dashboard() {
           {/* Quick actions */}
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
-              onClick={() => setTaskModalOpen(true)}
+              onClick={() => { setEditingTask(null); setTaskModalOpen(true); }}
               className="group flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm transition-all hover:bg-white/20"
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/30 transition-transform group-hover:scale-110">
@@ -142,7 +146,7 @@ export function Dashboard() {
               </div>
             </button>
             <button
-              onClick={() => setEventModalOpen(true)}
+              onClick={() => { setEditingEvent(null); setEventModalOpen(true); }}
               className="group flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm transition-all hover:bg-white/20"
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 text-white shadow-lg shadow-sky-500/30 transition-transform group-hover:scale-110">
@@ -283,11 +287,24 @@ export function Dashboard() {
         )}
       </motion.section>
 
-      <TaskModal open={taskModalOpen} onClose={() => setTaskModalOpen(false)} onSave={addTask} defaultDate={todayISO} />
+      <TaskModal
+        open={taskModalOpen}
+        onClose={() => { setTaskModalOpen(false); setEditingTask(null); }}
+        onSave={(t) => {
+          if (editingTask) updateTask(editingTask.id, t);
+          else addTask(t);
+        }}
+        task={editingTask}
+        defaultDate={todayISO}
+      />
       <EventModal
         open={eventModalOpen}
-        onClose={() => setEventModalOpen(false)}
-        onSave={(e: Partial<CalendarEvent>) => addEvent(e)}
+        onClose={() => { setEventModalOpen(false); setEditingEvent(null); }}
+        onSave={(e) => {
+          if (editingEvent) updateEvent(editingEvent.id, e);
+          else addEvent(e);
+        }}
+        event={editingEvent}
         defaultDate={todayISO}
       />
     </div>
