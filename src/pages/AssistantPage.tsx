@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Sparkles, Check, X, CalendarClock, MapPin, Trash2, CalendarDays } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useAuthStore } from '@/store/authStore';
-import { AssistantOnboarding } from '@/components/calendar/AssistantOnboarding';
+import { AssistantOnboarding, type OnboardingItem } from '@/components/calendar/AssistantOnboarding';
 import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
 import { calendarAi } from '@/services/calendar/calendarAi';
@@ -145,7 +145,7 @@ export function AssistantPage() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (result: { profile: import('@/types/calendar').AssistantProfile; preferences: Partial<UserPreferences> }) => {
+    (result: { profile: import('@/types/calendar').AssistantProfile; preferences: Partial<UserPreferences>; summary?: string; items?: OnboardingItem[] }) => {
       updatePreferences({
         workStart: result.preferences.workStart,
         workEnd: result.preferences.workEnd,
@@ -154,6 +154,74 @@ export function AssistantPage() {
         notificationsEnabled: result.preferences.notificationsEnabled,
         onboarding: result.profile,
       });
+
+      // ── ثبت همه آیتم‌های تأییدشده (چند کار/رویداد هم‌زمان) ──
+      const weekdayIndex: Record<string, number> = {
+        saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5, friday: 6,
+      };
+      const weekdayFa: Record<string, string> = {
+        saturday: 'شنبه', sunday: 'یکشنبه', monday: 'دوشنبه', tuesday: 'سه‌شنبه',
+        wednesday: 'چهارشنبه', thursday: 'پنجشنبه', friday: 'جمعه',
+      };
+      const todayJ = getTodayJalali();
+      const created: string[] = [];
+
+      for (const item of result.items ?? []) {
+        const title = String(item.title ?? '').trim();
+        if (!title) continue;
+        const recurrence = (item.recurrence as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly') || 'none';
+        const time = (item.time as string) || undefined;
+        const endTime = (item.end_time as string) || undefined;
+        const baseISO = (item.date as string) || getTodayISO();
+
+        if (item.type === 'event') {
+          const weekdays = Array.isArray(item.weekdays) ? (item.weekdays as string[]) : [];
+          if (weekdays.length > 1) {
+            for (const wd of weekdays) {
+              const target = weekdayIndex[wd.toLowerCase()];
+              if (target === undefined) continue;
+              const jsDay = (target + 6) % 7; // JS getDay: Sunday=0 ... Saturday=6
+              let probe = todayJ;
+              for (let i = 0; i < 8; i++) {
+                const iso = gregorianToISO(toGregorian(probe.year, probe.month, probe.day));
+                if (new Date(iso + 'T00:00:00').getDay() === jsDay) break;
+                probe = addJalaliDays(probe, 1);
+              }
+              const iso = gregorianToISO(toGregorian(probe.year, probe.month, probe.day));
+              const ev = addEvent({
+                title,
+                date: iso,
+                startTime: time || '10:00',
+                endTime,
+                recurrence: 'weekly',
+                category: 'work',
+                color: '#4f46e5',
+              });
+              if (ev && time) void scheduleTaskReminder(ev.title, ev.date, ev.startTime, 15);
+              created.push(`رویداد «${title}» (${weekdayFa[wd.toLowerCase()] ?? wd} هر هفته)`);
+            }
+          } else {
+            const ev = addEvent({ title, date: baseISO, startTime: time || '10:00', endTime, recurrence, category: 'work', color: '#4f46e5' });
+            if (ev && time) void scheduleTaskReminder(ev.title, ev.date, ev.startTime, 15);
+            created.push(`رویداد «${title}»`);
+          }
+        } else {
+          const tk = addTask({
+            title,
+            dueDate: baseISO,
+            dueTime: time,
+            duration: 60,
+            priority: 'medium',
+            category: 'personal',
+            status: 'pending',
+            recurrence,
+            dayOfMonth: (item.day_of_month as number) || undefined,
+          });
+          if (tk && time) void scheduleTaskReminder(tk.title, tk.dueDate, tk.dueTime, 15);
+          created.push(`کار «${title}»${recurrence !== 'none' ? ' (تکرارشونده)' : ''}`);
+        }
+      }
+
       setShowOnboarding(false);
       pushMessage({
         role: 'assistant',
@@ -162,7 +230,7 @@ export function AssistantPage() {
 هر چیزی تو ذهنت هست بگو — مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروزم چیه؟»`,
       });
     },
-    [updatePreferences, pushMessage],
+    [updatePreferences, pushMessage, addTask, addEvent],
   );
 
   const clearActions = useCallback(() => {

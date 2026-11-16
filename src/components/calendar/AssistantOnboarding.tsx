@@ -17,11 +17,27 @@ interface Turn {
   content: string;
 }
 
+export interface OnboardingItem {
+  type: 'event' | 'task';
+  title: string;
+  recurrence: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  date?: string;
+  time?: string;
+  end_time?: string;
+  day_of_month?: number;
+  weekdays?: string[];
+  status: string;
+}
+
 interface Props {
   userName?: string;
-  onComplete: (result: { profile: AssistantProfile; preferences: Partial<UserPreferences>; summary: string }) => void;
+  onComplete: (result: { profile: AssistantProfile; preferences: Partial<UserPreferences>; summary: string; items: OnboardingItem[] }) => void;
   onSkip?: () => void;
 }
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5, friday: 6,
+};
 
 const OPENING =
   'سلام! من مدیر برنامه‌ی تو هستم. قبل از شروع، چند سؤال کوتاه ازت می‌پرسم تا برنامه‌ریزیم دقیقاً برای «زندگی تو» باشه. هر جواب هم می‌تونی تایپ کنی هم از گزینه‌ها انتخاب کنی. آماده‌ای؟';
@@ -206,9 +222,10 @@ const ONBOARD_SYSTEM = `# System Prompt — دستیار هوشمند یادتو
 - question: متن کامل پیام تو
 - chips: ۳ تا ۵ پاسخ پیش‌فرض متناسب با جواب‌های قبلی؛ برای سؤال آزاد خالی
 - items: آرایه برنامه‌های استخراج‌شده از کل مکالمه تا این نوبت (هر بار کامل و آخرین وضعیت):
-  [{"type":"event"|"task","title":"...","recurrence":"none"|"daily"|"weekly"|"monthly"|"yearly","date":"YYYY-MM-DD میلادی اختیاری","time":"HH:mm اختیاری","end_time":"HH:mm اختیاری","day_of_month":اختیاری,"reminder_days_before":اختیاری,"status":"pending"|"confirmed"|"incomplete","priority":"low"|"medium"|"high" اختیاری}]
+  [{"type":"event"|"task","title":"...","recurrence":"none"|"daily"|"weekly"|"monthly"|"yearly","weekdays":["saturday","sunday","monday","tuesday","wednesday","thursday","friday"] اختیاری (برای تکرار هفتگی چندروزه — هر روز یک آیتم جدا هم قابل قبول است),"date":"YYYY-MM-DD میلادی اختیاری","time":"HH:mm اختیاری","end_time":"HH:mm اختیاری","day_of_month":اختیاری,"reminder_days_before":اختیاری,"status":"pending"|"confirmed"|"incomplete","priority":"low"|"medium"|"high" اختیاری}]
   فقط موارد واقعی و قابل ثبت را بگذار؛ موارد ناقص با status:"incomplete". حدس نزن.
-- awaitingConfirm: true فقط در پیام خلاصه پایانی (بخش ۱۳)
+- awaitingConfirm: true فقط در پیام خلاصه پایانی (بخش ۱۳). «بعد از یک بار awaitingConfirm=true دیگر هیچ سؤالی نپرس و در نوبت‌های بعد هم awaitingConfirm=true بماند تا کاربر تأیید یا اصلاح کند.»
+- در items همیشه «همه» موارد شناسایی‌شده تا الان را کامل بفرست (آخرین وضعیت)، حتی موارد تکراری از نوبت‌های قبل. اگر کاربر گفت شنبه و دوشنبه کلاس زبان دارد، دو آیتم جدا بساز (هر روز یک آیتم).
 - done + profile: فقط وقتی کاربر خلاصه را تأیید کرد. profile:
 {"role":"...","jobTitle":"...","wakeTime":"HH:mm","sleepTime":"HH:mm","fixedEvents":"...","tasks":"...","goals":"...","planningStyle":"..."}
 
@@ -300,10 +317,13 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
   const [fallbackStep, setFallbackStep] = useState(-1);
   const [error, setError] = useState(false);
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
+  const [pendingItems, setPendingItems] = useState<OnboardingItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const answersRef = useRef<Record<string, string>>({});
   const finishedRef = useRef(false);
+  const lastItemsRef = useRef<OnboardingItem[]>([]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -338,7 +358,7 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
   }, []);
 
   const finishWithAIProfile = useCallback(
-    (profile: Record<string, unknown> | null, summary: string) => {
+    (profile: Record<string, unknown> | null, summary: string, items: OnboardingItem[] = []) => {
       if (finishedRef.current) return;
       finishedRef.current = true;
       const fallback = buildProfile();
@@ -381,6 +401,7 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
           notificationsEnabled: true,
         },
         summary,
+        items,
       });
     },
     [buildProfile, onComplete],
@@ -411,7 +432,7 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
         ],
         temperature: 0.5,
         response_format_json: true,
-        max_tokens: 400,
+        max_tokens: 1500,
       });
       const content =
         (data?.choices?.[0]?.message?.content ??
@@ -503,9 +524,10 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
         return;
       }
 
-      // اگر گزارش نهایی نمایش داده شده و کاربر تأیید کرد → بستن خودکار
+      // اگر گزارش نهایی نمایش داده شده و کاربر تأیید کرد → ثبت آیتم‌های انتخابی و بستن
       if (awaitingConfirm) {
-        finishWithAIProfile(null, '');
+        const chosen = lastItemsRef.current.filter((_, i) => selectedIds.has(i));
+        finishWithAIProfile(null, '', chosen);
         return;
       }
 
@@ -513,10 +535,14 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
         setBusy(true);
         try {
           const next = await askAI(answer);
-          if (next.done) {
+          // keep the latest non-empty items list for the confirm screen
+          if (next.items.length > 0) {
+            lastItemsRef.current = next.items as unknown as OnboardingItem[];
+          }
+          if (next.done || (next.awaitingConfirm && lastItemsRef.current.length === 0)) {
             turnsRef.current.push({ role: 'assistant', content: next.question });
             setHistory((prev) => [...prev, { role: 'assistant', content: next.question }]);
-            finishWithAIProfile(next.profile, next.question);
+            finishWithAIProfile(next.profile, next.question, lastItemsRef.current);
             return;
           }
           turnsRef.current.push({ role: 'assistant', content: next.question });
@@ -525,6 +551,10 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
           setIsWorkHours(next.isWorkHours);
           setStage(next.stage);
           setAwaitingConfirm(next.awaitingConfirm);
+          if (next.awaitingConfirm && lastItemsRef.current.length > 0) {
+            // build selection set: all selected by default
+            setSelectedIds(new Set(lastItemsRef.current.map((_, i) => i)));
+          }
           setHistory((prev) => [...prev, { role: 'assistant', content: next.question }]);
           setError(false);
         } catch {
@@ -539,7 +569,7 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
         }
       })();
     },
-    [busy, currentQuestion, isWorkHours, awaitingConfirm, error, fallbackStep, askAI, finishWithAIProfile],
+    [busy, currentQuestion, isWorkHours, awaitingConfirm, selectedIds, error, fallbackStep, askAI, finishWithAIProfile],
   );
 
   const start = useCallback(() => {
@@ -644,10 +674,13 @@ export function AssistantOnboarding({ userName, onComplete, onSkip }: Props) {
                 <div className="mb-2 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => finishWithAIProfile(null, '')}
+                    onClick={() => {
+                      const chosen = lastItemsRef.current.filter((_, i) => selectedIds.has(i));
+                      finishWithAIProfile(null, '', chosen);
+                    }}
                     className="rounded-full bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
                   >
-                    ✓ تأیید می‌کنم
+                    ✓ تأیید و ثبت
                   </button>
                   <button
                     type="button"
