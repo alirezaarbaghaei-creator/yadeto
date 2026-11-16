@@ -103,7 +103,7 @@ export function PricingPage() {
             <div>
               <p className="text-xs text-slate-500">طرح فعلی شما</p>
               <p className="text-lg font-bold text-slate-900">
-                {PLANS.find((p) => p.id === planType)?.name ?? 'آزمایشی'}
+                {PLANS.find((p) => p.id === planType)?.name ?? 'رایگان'}
               </p>
               {expiresAt ? (
                 <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
@@ -125,7 +125,7 @@ export function PricingPage() {
             <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-2">
               <Gift className="h-4 w-4 text-indigo-500" />
               <span className="text-sm font-bold text-indigo-700">
-                {(templateLimit - templateUsage).toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')} ثبت خودکار
+                {(templateLimit - templateUsage).toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')} ثبت کار و رویداد
               </span>
             </div>
           </div>
@@ -299,13 +299,16 @@ function PlanCard({
 
 function FeatureComparison({ currentPlan }: { currentPlan: PlanId }) {
   const features = [
-    { label: 'فرمان دستیار هوشمند', plans: { free: '۳ در ماه', basic: '۲۰ در ماه', pro: '۸۰ در ماه' } },
-    { label: 'ثبت خودکار کار و رویداد', plans: { free: '۱۰ در ماه', basic: '۳۰ در ماه', pro: '۱۲۰ در ماه' } },
-    { label: 'تقویم جلالی و مناسبت‌ها', plans: { free: true, basic: true, pro: true } },
-    { label: 'یادآوری کار و رویداد', plans: { free: true, basic: true, pro: true } },
-    { label: 'گزارش هفتگی', plans: { free: true, basic: true, pro: true } },
+    { label: 'پیام دستیار هوشمند', plans: { free: '۵ در ماه', basic: '۱۰۰ در ماه', pro: '۵۰۰ در ماه' } },
+    { label: 'ثبت کار و رویداد', plans: { free: '۱۵ در ماه', basic: 'نامحدود', pro: 'نامحدود' } },
+    { label: 'تقویم جلالی/میلادی/قمری + مناسبت‌ها', plans: { free: true, basic: true, pro: true } },
+    { label: 'کارها و رویدادهای تکرارشونده', plans: { free: true, basic: true, pro: true } },
+    { label: 'خلاصه روز و گزارش هفتگی', plans: { free: true, basic: true, pro: true } },
+    { label: 'جستجوی وب توسط دستیار', plans: { free: false, basic: true, pro: true } },
+    { label: 'هشدار تداخل زمانی', plans: { free: false, basic: true, pro: true } },
+    { label: 'پیشنهاد زمان مسافرت', plans: { free: false, basic: true, pro: true } },
     { label: 'همگام‌سازی بین دستگاه‌ها', plans: { free: false, basic: true, pro: true } },
-    { label: 'پشتیبانی ایمیل', plans: { free: false, basic: true, pro: true } },
+    { label: 'پشتیبانی', plans: { free: false, basic: 'ایمیل', pro: 'اولویت‌دار' } },
     { label: 'دستیار با اولویت پردازش', plans: { free: false, basic: false, pro: true } },
   ];
 

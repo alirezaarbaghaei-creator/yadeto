@@ -1500,7 +1500,7 @@ try {
     if ($act === 'admin_subs_list') {
         $stmt = db()->query("SELECT u.id, u.phone, u.full_name, u.plan_type, u.ai_assistant_usage_this_month, u.template_usage_this_month, u.usage_cycle_start, u.plan_expires_at FROM kateb_users u ORDER BY u.created_at DESC LIMIT 50");
         $rows = $stmt->fetchAll();
-        $planLimits = ['free' => [3, 10], 'basic' => [20, 30], 'pro' => [80, 120]];
+        $planLimits = ['free' => [5, 15], 'basic' => [100, 200], 'pro' => [500, 1000]];
         $enriched = [];
         foreach ($rows as $r) {
             $planId = $r['plan_type'] ?? 'free';
