@@ -68,14 +68,14 @@ function AppShell() {
     };
   }, []);
 
-  // Load calendar data (tasks/events/holidays/prefs) once we have a session
+  // Load calendar data (local-first; cloud sync kicks in when a session exists)
   useEffect(() => {
-    if (session && !loaded) {
+    if (!loaded) {
       refresh().catch((err) => {
         console.warn('[SmartCalendar] calendar refresh failed', err);
       });
     }
-  }, [session, loaded, refresh]);
+  }, [loaded, refresh]);
 
   // Handle deep links from Capacitor (Android)
   useDeepLinks((url) => {
@@ -155,13 +155,53 @@ function AppShell() {
     );
   }
 
+  // No login required to browse the app — calendar/tasks work anonymously.
+  // Only the assistant needs a session; it shows the login page by itself.
   if (!session) {
-    // First launch: multi-step intro first, login page only after it's done
-    // (or skipped). The seen-flag makes sure it never shows a second time.
-    if (!introSeen) {
-      return <IntroTour onDone={handleIntroDone} />;
+    const noAuthPages: Record<string, React.ReactNode> = {
+      home: <Dashboard />,
+      calendar: <CalendarPage />,
+      tasks: <TasksPage />,
+    };
+    const page = noAuthPages[currentPage];
+    if (!page) {
+      // assistant / admin / account / pricing without a session -> login
+      if (!introSeen) {
+        return <IntroTour onDone={handleIntroDone} />;
+      }
+      return (
+        <AuthPage
+          assistantOnly={currentPage === 'assistant'}
+          onAuthed={() => setPage('assistant')}
+        />
+      );
     }
-    return <AuthPage />;
+    return (
+      <div className="min-h-screen bg-surface">
+        <OfflineBanner />
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl" />
+          <div className="absolute top-1/2 -left-40 h-96 w-96 rounded-full bg-cyan-200/20 blur-3xl" />
+        </div>
+        <MobileHeader anonymous />
+        <main className="relative lg:mr-64">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 pb-28 lg:pb-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPage}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {page}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
   }
 
   const pages: Record<string, React.ReactNode> = {

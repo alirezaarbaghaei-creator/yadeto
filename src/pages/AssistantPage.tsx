@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Sparkles, Check, X, CalendarClock, MapPin, Trash2, CalendarDays } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useAuthStore } from '@/store/authStore';
-import { AssistantOnboarding, type OnboardingItem } from '@/components/calendar/AssistantOnboarding';
 import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
 import { calendarAi } from '@/services/calendar/calendarAi';
@@ -92,19 +91,19 @@ function formatDayList(
   return text.trim();
 }
 
-function buildGreeting(holidays: { title: string; gregorianDate: string; isOfficialHoliday: boolean }[]): string {
-  const today = getTodayJalali();
-  const weekday = formatJalali(today, 'full').split(' ')[0];
-  let greeting = `سلام! من دستیار هوشمند تقویم تو هستم. امروز ${weekday} ${toFaDigits(today.day)} ماه است.`;
-  const todayHolidays = holidays.filter((h) => h.gregorianDate === getTodayISO());
-  if (todayHolidays.length > 0) {
-    greeting += `\n\nامروز ${todayHolidays.map((h) => h.title).join('، ')} است.`;
-    if (todayHolidays.some((h) => h.isOfficialHoliday)) {
-      greeting += ' روز تعطیل رسمیه، پس می‌تونی استراحت کنی!';
-    }
-  }
-  greeting += '\n\nبرنامه‌ات رو با هم مدیریت کنیم. هر چیزی که تو ذهنته بگو — مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروزم چیه؟»';
-  return greeting;
+function buildGreeting(): string {
+  return `سلام! من «یادتو» هستم — مدیر برنامه شخصی تو 👋
+
+این کارها رو برات انجام می‌دم:
+• ثبت کار و رویداد فقط با یک جمله («فردا ساعت ۱۰ جلسه دارم» یا «یادم بنداز پنجشنبه قبض رو بپردازم»)
+• برنامه امروز یا هر روز دلخواه، دقیق و مرتب بر اساس ساعت
+• کارهای تکرارشونده (قسط ماهانه، کلاس هفتگی، ورزش روزانه)
+• پیدا کردن زمان آزاد و پیشنهاد بهترین وقت برای کارهای جدید
+• جستجوی وب برای اطلاعات زنده (مثل بازی بعدی پرسپولیس!) و ثبتش به‌عنوان رویداد
+• هشدار تداخل زمانی و پیشنهاد جابه‌جایی
+• پیشنهاد بهترین تاریخ برای مسافرت بر اساس تعطیلات و برنامه‌ات
+
+از یکی از پیشنهادهای زیر شروع کن یا هرچی تو ذهنت هست بگو.`;
 }
 
 export function AssistantPage() {
@@ -121,12 +120,10 @@ export function AssistantPage() {
   const updatePreferences = useCalendarStore((s) => s.updatePreferences);
   const user = useAuthStore((s) => s.user);
 
-  const needsOnboarding = !preferences?.onboarding;
-  const [showOnboarding, setShowOnboarding] = useState(needsOnboarding);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const stored = loadStoredMessages();
     if (stored.length > 0) return stored;
-    return [{ id: '0', role: 'assistant', content: buildGreeting([]) }];
+    return [{ id: '0', role: 'assistant', content: buildGreeting() }];
   });
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -144,94 +141,7 @@ export function AssistantPage() {
     });
   }, []);
 
-  const handleOnboardingComplete = useCallback(
-    (result: { profile: import('@/types/calendar').AssistantProfile; preferences: Partial<UserPreferences>; summary?: string; items?: OnboardingItem[] }) => {
-      updatePreferences({
-        workStart: result.preferences.workStart,
-        workEnd: result.preferences.workEnd,
-        workDays: result.preferences.workDays,
-        defaultReminder: result.preferences.defaultReminder,
-        notificationsEnabled: result.preferences.notificationsEnabled,
-        onboarding: result.profile,
-      });
 
-      // ── ثبت همه آیتم‌های تأییدشده (چند کار/رویداد هم‌زمان) ──
-      const weekdayIndex: Record<string, number> = {
-        saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5, friday: 6,
-      };
-      const weekdayFa: Record<string, string> = {
-        saturday: 'شنبه', sunday: 'یکشنبه', monday: 'دوشنبه', tuesday: 'سه‌شنبه',
-        wednesday: 'چهارشنبه', thursday: 'پنجشنبه', friday: 'جمعه',
-      };
-      const todayJ = getTodayJalali();
-      const created: string[] = [];
-
-      for (const item of result.items ?? []) {
-        const title = String(item.title ?? '').trim();
-        if (!title) continue;
-        const recurrence = (item.recurrence as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly') || 'none';
-        const time = (item.time as string) || undefined;
-        const endTime = (item.end_time as string) || undefined;
-        const baseISO = (item.date as string) || getTodayISO();
-
-        if (item.type === 'event') {
-          const weekdays = Array.isArray(item.weekdays) ? (item.weekdays as string[]) : [];
-          if (weekdays.length > 1) {
-            for (const wd of weekdays) {
-              const target = weekdayIndex[wd.toLowerCase()];
-              if (target === undefined) continue;
-              const jsDay = (target + 6) % 7; // JS getDay: Sunday=0 ... Saturday=6
-              let probe = todayJ;
-              for (let i = 0; i < 8; i++) {
-                const iso = gregorianToISO(toGregorian(probe.year, probe.month, probe.day));
-                if (new Date(iso + 'T00:00:00').getDay() === jsDay) break;
-                probe = addJalaliDays(probe, 1);
-              }
-              const iso = gregorianToISO(toGregorian(probe.year, probe.month, probe.day));
-              const ev = addEvent({
-                title,
-                date: iso,
-                startTime: time || '10:00',
-                endTime,
-                recurrence: 'weekly',
-                category: 'work',
-                color: '#4f46e5',
-              });
-              if (ev && time) void scheduleTaskReminder(ev.title, ev.date, ev.startTime, 15);
-              created.push(`رویداد «${title}» (${weekdayFa[wd.toLowerCase()] ?? wd} هر هفته)`);
-            }
-          } else {
-            const ev = addEvent({ title, date: baseISO, startTime: time || '10:00', endTime, recurrence, category: 'work', color: '#4f46e5' });
-            if (ev && time) void scheduleTaskReminder(ev.title, ev.date, ev.startTime, 15);
-            created.push(`رویداد «${title}»`);
-          }
-        } else {
-          const tk = addTask({
-            title,
-            dueDate: baseISO,
-            dueTime: time,
-            duration: 60,
-            priority: 'medium',
-            category: 'personal',
-            status: 'pending',
-            recurrence,
-            dayOfMonth: (item.day_of_month as number) || undefined,
-          });
-          if (tk && time) void scheduleTaskReminder(tk.title, tk.dueDate, tk.dueTime, 15);
-          created.push(`کار «${title}»${recurrence !== 'none' ? ' (تکرارشونده)' : ''}`);
-        }
-      }
-
-      setShowOnboarding(false);
-      pushMessage({
-        role: 'assistant',
-        content: `عالی! با نقش «${result.profile.jobTitle}» و ساعات کاری ${toFaDigits(result.preferences.workStart ?? '')} تا ${toFaDigits(result.preferences.workEnd ?? '')} شناختم.
-از این به بعد برنامه‌هات رو داخل همین بازه می‌چینم و یادآوری‌ها رو بیرون از ساعت خوابت نمی‌ذارم.
-هر چیزی تو ذهنت هست بگو — مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروزم چیه؟»`,
-      });
-    },
-    [updatePreferences, pushMessage, addTask, addEvent],
-  );
 
   const clearActions = useCallback(() => {
     setMessages((prev) => prev.map((m) => (m.actions?.length ? { ...m, actions: [] } : m)));
@@ -543,18 +453,17 @@ export function AssistantPage() {
   );
 
 
-  const quickPrompts = ['برنامه امروزم چیه؟', 'فردا ساعت ۱۰ جلسه دارم', 'این هفته چند کار انجام دادم؟'];
+  const quickPrompts = [
+    'برنامه امروزم چیه؟',
+    'فردا ساعت ۱۰ جلسه دارم',
+    'یادم بنداز پنجشنبه قبض رو بپردازم',
+    'هفته پیش رو چه زمانی آزادم؟',
+    'بازی بعدی پرسپولیس کیه؟',
+    'چه تاریخی برای مسافرت خوبه؟',
+  ];
 
   return (
-    <>
-      {showOnboarding && needsOnboarding && (
-        <AssistantOnboarding
-          userName={user?.full_name}
-          onComplete={handleOnboardingComplete}
-          onSkip={() => setShowOnboarding(false)}
-        />
-      )}
-      <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
+    <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 text-white">
           <Sparkles className="h-4 w-4" />
@@ -629,7 +538,7 @@ export function AssistantPage() {
       </div>
 
       {/* Quick prompts (only at start) */}
-      {messages.length <= 1 && (
+      {(messages.length <= 1 || true) && (
         <div className="flex flex-wrap justify-end gap-2 pb-2">
           {quickPrompts.map((q) => (
             <button
@@ -675,7 +584,6 @@ export function AssistantPage() {
         همگام‌سازی امن با حساب کاربری شما
         <CalendarClock className="h-3 w-3" />
       </p>
-      </div>
-    </>
+    </div>
   );
 }

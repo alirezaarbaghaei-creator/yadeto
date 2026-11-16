@@ -394,7 +394,7 @@ function reset_usage_if_needed(array &$user): void {
 
 function create_session(string $userId, string $phone): string {
     $token = gen_token();
-    $expires = date('Y-m-d H:i:s', time() + 30 * 86400);
+    $expires = date('Y-m-d H:i:s', time() + 180 * 86400);
     db()->prepare("INSERT INTO kateb_sessions (token, user_id, phone, expires_at) VALUES (?, ?, ?, ?)")
         ->execute([$token, $userId, $phone, $expires]);
     return $token;

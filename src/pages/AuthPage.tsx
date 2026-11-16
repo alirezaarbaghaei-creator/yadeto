@@ -9,7 +9,14 @@ import type { SmsCodeEvent } from '@/services/smsAutofillPlugin';
 type Step = 'phone' | 'otp' | 'register';
 type Mode = 'otp' | 'password';
 
-export function AuthPage() {
+interface AuthPageProps {
+  /** when true, the header copy explains login is only needed for the assistant */
+  assistantOnly?: boolean;
+  /** called after a successful login (used to route back to the assistant) */
+  onAuthed?: () => void;
+}
+
+export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
   const setSession = useAuthStore((s) => s.setSession);
   const [mode, setMode] = useState<Mode>('otp');
   const [step, setStep] = useState<Step>('phone');
@@ -348,6 +355,7 @@ export function AuthPage() {
     try {
       const res = await api.otpVerify(phone, value);
       setSession(res.token, res.user);
+      onAuthed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'کد اشتباه است');
     } finally {
@@ -379,6 +387,7 @@ export function AuthPage() {
     try {
       const res = await api.otpVerify(phone, code, fullName, password);
       setSession(res.token, res.user);
+      onAuthed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ثبت‌نام');
     } finally {
@@ -401,6 +410,7 @@ export function AuthPage() {
     try {
       const res = await api.passwordLogin(phone, password);
       setSession(res.token, res.user);
+      onAuthed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ورود');
     } finally {
@@ -443,7 +453,9 @@ export function AuthPage() {
               <CalendarDays className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">تقویم هوشمند</h1>
-            <p className="text-sm text-slate-500 mt-1">مدیریت زمان و کارها</p>
+            <p className="text-sm text-slate-500 mt-1">
+              {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'مدیریت زمان و کارها'}
+            </p>
           </div>
 
           {/* Mode tabs */}
