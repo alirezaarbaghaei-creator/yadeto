@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Send, Sparkles, Check, X, CalendarClock, MapPin, Trash2, CalendarDays } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
+import { usePlanStore } from '@/store/planStore';
 import { useAuthStore } from '@/store/authStore';
 import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
@@ -119,6 +120,11 @@ export function AssistantPage() {
   const updateTask = useCalendarStore((s) => s.updateTask);
   const updatePreferences = useCalendarStore((s) => s.updatePreferences);
   const user = useAuthStore((s) => s.user);
+  const canUseAiAssistant = usePlanStore((s) => s.canUseAiAssistant);
+  const incrementAiAssistant = usePlanStore((s) => s.incrementAiAssistant);
+  const canUseTemplate = usePlanStore((s) => s.canUseTemplate);
+  const incrementTemplate = usePlanStore((s) => s.incrementTemplate);
+  const openUpgradeModal = usePlanStore((s) => s.openUpgradeModal);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const stored = loadStoredMessages();
@@ -152,6 +158,18 @@ export function AssistantPage() {
     async (intentData: Record<string, unknown>) => {
       const action = intentData.action as string;
 
+      // ── سهمیه ثبت کار/رویداد ──
+      if (action === 'create_task' || action === 'create_recurring_task' || action === 'create_event') {
+        if (!canUseTemplate()) {
+          openUpgradeModal('no-template-credits');
+          pushMessage({
+            role: 'assistant',
+            content: '🔒 سهمیه ثبت کار و رویداد این ماهت تمام شده. با ارتقای طرح می‌تونی نامحدود ثبت کنی.',
+          });
+          return;
+        }
+      }
+
       if (action === 'create_task' || action === 'create_recurring_task') {
         const title = (intentData.title as string) || 'کار';
         const dateStr = (intentData.date as string) || formatJalali(getTodayJalali(), 'short');
@@ -172,6 +190,7 @@ export function AssistantPage() {
         if (task && task.dueTime) {
           await scheduleTaskReminder(task.title, task.dueDate, task.dueTime, preferences?.defaultReminder ?? 15);
         }
+        void incrementTemplate(user?.id ?? 'local');
         pushMessage({
           role: 'assistant',
           content: `✓ کار «${title}» برای ${formatJalali(parseJalali(dateStr) ?? getTodayJalali(), 'long')}${
@@ -194,6 +213,7 @@ export function AssistantPage() {
         if (event) {
           await scheduleTaskReminder(event.title, event.date, event.startTime, preferences?.defaultReminder ?? 15);
         }
+        void incrementTemplate(user?.id ?? 'local');
         pushMessage({
           role: 'assistant',
           content: `✓ رویداد «${title}» برای ${formatJalali(parseJalali(dateStr) ?? getTodayJalali(), 'long')} ساعت ${toFaDigits(time)} ثبت شد.`,
@@ -252,7 +272,7 @@ export function AssistantPage() {
 
       pushMessage({ role: 'assistant', content: 'این عملیات هنوز پشتیبانی نمی‌شود.' });
     },
-    [addTask, addEvent, toggleTask, deleteTask, deleteEvent, updateTask, tasks, events, preferences, pushMessage],
+    [addTask, addEvent, toggleTask, deleteTask, deleteEvent, updateTask, tasks, events, preferences, pushMessage, canUseTemplate, incrementTemplate, openUpgradeModal, user],
   );
 
 
@@ -346,6 +366,17 @@ export function AssistantPage() {
     async (text: string) => {
       setThinking(true);
 
+      // ── سهمیه پیام دستیار: قبل از هر فراخوانی AI ──
+      if (!canUseAiAssistant()) {
+        setThinking(false);
+        openUpgradeModal('no-ai-credits');
+        pushMessage({
+          role: 'assistant',
+          content: '🔒 سهمیه پیام‌های دستیار این ماهت تمام شده. برای ادامه، طرحت رو ارتقا بده — از پنجره‌ای که باز شد می‌تونی انتخاب کنی.',
+        });
+        return;
+      }
+
       // Plain-text confirm/cancel against the last action message
       const isConfirmText = /^(بله|آره|ثبت کن|تأیید|باشه|درسته|انجام بده)\s*[!؟.]?$/i.test(text.trim());
       const isCancelText = /^(نه|لغو|بی‌خیال|کنسل|انصراف|نمی‌خوام)\s*[!؟.]?$/i.test(text.trim());
@@ -390,6 +421,9 @@ export function AssistantPage() {
         pushMessage(offlineMessage);
         return;
       }
+
+      // یک پیام از سهمیه دستیار کسر شد (پاسخ موفق)
+      void incrementAiAssistant(user?.id ?? 'local');
 
       const intent = llmResponse.intent as AIIntent | null;
 
