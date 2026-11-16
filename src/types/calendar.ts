@@ -75,6 +75,14 @@ export interface AssistantProfile {
   jobTitle: string;
   wakeTime: string;
   sleepTime: string;
+  /** weekly fixed commitments the AI extracted (candidates for recurring events) */
+  fixedEvents?: string;
+  /** tasks/responsibilities without a fixed time */
+  tasks?: string;
+  /** goals and habits the user wants to add */
+  goals?: string;
+  /** planning style: hourly vs flexible, break needs, focus times, reminder prefs */
+  planningStyle?: string;
   completedAt: string;
 }
 
