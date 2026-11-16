@@ -194,7 +194,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
                   <div>
                     <p className="text-base font-bold text-slate-900">طرح {plan.name}</p>
                     <p className="text-xs text-slate-500">
-                      {plan.aiAssistantLimit.toLocaleString('fa-IR')} دستیار + {plan.templateLimit.toLocaleString('fa-IR')} قالب در ماه
+                      {plan.aiAssistantLimit.toLocaleString('fa-IR')} دستیار + {plan.templateLimit.toLocaleString('fa-IR')} قالب در روز
                     </p>
                   </div>
                 </div>

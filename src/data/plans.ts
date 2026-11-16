@@ -28,13 +28,13 @@ export const PLANS: PricingPlan[] = [
     price: 0,
     priceLabel: 'رایگان',
     period: '',
-    aiAssistantLimit: 5,
+    aiAssistantLimit: 10,
     templateLimit: 15,
     accent: 'slate',
     gradient: 'from-slate-400 to-slate-600',
     features: [
-      { label: '۵ پیام دستیار هوشمند در ماه', included: true },
-      { label: '۱۵ ثبت کار و رویداد در ماه (دستی)', included: true },
+      { label: '۱۰ پیام دستیار هوشمند در روز', included: true },
+      { label: '۱۵ ثبت کار و رویداد در روز (دستی)', included: true },
       { label: 'تقویم جلالی/میلادی/قمری با ۱۹۳ مناسبت سال', included: true },
       { label: 'کارها و رویدادهای تکرارشونده', included: true },
       { label: 'یادآوری روی دستگاه', included: true },
@@ -48,15 +48,15 @@ export const PLANS: PricingPlan[] = [
     id: 'basic',
     name: 'پایه',
     nameEn: 'Basic',
-    price: 99000,
-    priceLabel: '۹۹٬۰۰۰',
+    price: 599000,
+    priceLabel: '۵۹۹٬۰۰۰',
     period: 'ماهانه',
     aiAssistantLimit: 100,
     templateLimit: 200,
     accent: 'cyan',
     gradient: 'from-cyan-500 to-blue-600',
     features: [
-      { label: '۱۰۰ پیام دستیار هوشمند در ماه', included: true },
+      { label: '۱۰۰ پیام دستیار هوشمند در روز', included: true },
       { label: 'ثبت نامحدود کار و رویداد', included: true },
       { label: 'همگام‌سازی بین دستگاه‌ها', included: true },
       { label: 'جستجوی وب توسط دستیار', included: true },
@@ -70,8 +70,8 @@ export const PLANS: PricingPlan[] = [
     id: 'pro',
     name: 'حرفه‌ای',
     nameEn: 'Pro',
-    price: 199000,
-    priceLabel: '۱۹۹٬۰۰۰',
+    price: 1599000,
+    priceLabel: '۱٬۵۹۹٬۰۰۰',
     period: 'ماهانه',
     aiAssistantLimit: 500,
     templateLimit: 1000,
@@ -79,7 +79,7 @@ export const PLANS: PricingPlan[] = [
     accent: 'indigo',
     gradient: 'from-indigo-500 to-indigo-700',
     features: [
-      { label: '۵۰۰ پیام دستیار هوشمند در ماه', included: true },
+      { label: '۵۰۰ پیام دستیار هوشمند در روز', included: true },
       { label: 'ثبت نامحدود کار و رویداد', included: true },
       { label: 'همگام‌سازی نامحدود بین دستگاه‌ها', included: true },
       { label: 'جستجوی وب توسط دستیار', included: true },
@@ -103,4 +103,3 @@ export function getPlanById(id: string): PricingPlan | undefined {
 export function formatToman(n: number): string {
   return n.toLocaleString('fa-IR');
 }
-

@@ -299,8 +299,8 @@ function PlanCard({
 
 function FeatureComparison({ currentPlan }: { currentPlan: PlanId }) {
   const features = [
-    { label: 'پیام دستیار هوشمند', plans: { free: '۵ در ماه', basic: '۱۰۰ در ماه', pro: '۵۰۰ در ماه' } },
-    { label: 'ثبت کار و رویداد', plans: { free: '۱۵ در ماه', basic: 'نامحدود', pro: 'نامحدود' } },
+    { label: 'پیام دستیار هوشمند', plans: { free: '۱۰ در روز', basic: '۱۰۰ در روز', pro: '۵۰۰ در روز' } },
+    { label: 'ثبت کار و رویداد', plans: { free: '۱۵ در روز', basic: 'نامحدود', pro: 'نامحدود' } },
     { label: 'تقویم جلالی/میلادی/قمری + مناسبت‌ها', plans: { free: true, basic: true, pro: true } },
     { label: 'کارها و رویدادهای تکرارشونده', plans: { free: true, basic: true, pro: true } },
     { label: 'خلاصه روز و گزارش هفتگی', plans: { free: true, basic: true, pro: true } },

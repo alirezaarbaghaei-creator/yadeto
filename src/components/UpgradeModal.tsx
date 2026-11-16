@@ -95,7 +95,7 @@ export function UpgradeModal() {
                         {plan.aiAssistantLimit.toLocaleString('fa-IR')} دستیار هوشمند
                       </p>
                       <p className="text-xs text-slate-600">
-                        {plan.templateLimit.toLocaleString('fa-IR')} ثبت خودکار در ماه
+                        {plan.templateLimit.toLocaleString('fa-IR')} ثبت خودکار در روز
                       </p>
                     </div>
                     <div className="flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 group-hover:gap-2 transition-all">

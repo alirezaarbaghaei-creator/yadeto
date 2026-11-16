@@ -573,7 +573,7 @@ function SubEditModal({ user, onClose, onSaved }: { user: AdminUserRow; onClose:
 
         <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
           <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
-          <p className="text-xs text-amber-600">با تغییر طرح، شمارش‌گرهای ماهانه صفر می‌شوند.</p>
+          <p className="text-xs text-amber-600">با تغییر طرح، شمارش‌گرهای روزانه صفر می‌شوند.</p>
         </div>
 
         {error && <ErrorBox text={error} />}

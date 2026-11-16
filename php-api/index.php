@@ -380,9 +380,9 @@ function reset_usage_if_needed(array &$user): void {
     if (!$cycleStart) {
         $needsReset = true;
     } else {
-        $start = strtotime($cycleStart);
-        $thirtyDays = 30 * 24 * 60 * 60;
-        if (time() - $start >= $thirtyDays) $needsReset = true;
+        $startDay = date('Y-m-d', strtotime($cycleStart));
+        $todayDay = date('Y-m-d');
+        if ($startDay !== $todayDay) $needsReset = true;
     }
     if ($needsReset) {
         db()->prepare("UPDATE kateb_users SET ai_assistant_usage_this_month = 0, template_usage_this_month = 0, usage_cycle_start = ? WHERE id = ?")
@@ -1166,7 +1166,7 @@ try {
     // ─── Plan Purchase via Zarinpal ───────────────────────────
     if ($act === 'plan_request') {
         $planId = (string)($b['plan_id'] ?? '');
-        $planPrices = ['basic' => 59000, 'pro' => 119000];
+        $planPrices = ['basic' => 599000, 'pro' => 1599000];
         if (!isset($planPrices[$planId])) json_error('طرح نامعتبر', 400);
         $monthlyPrice = $planPrices[$planId];
         $durationMonths = (int)($b['duration_months'] ?? 1);
@@ -1500,7 +1500,7 @@ try {
     if ($act === 'admin_subs_list') {
         $stmt = db()->query("SELECT u.id, u.phone, u.full_name, u.plan_type, u.ai_assistant_usage_this_month, u.template_usage_this_month, u.usage_cycle_start, u.plan_expires_at FROM kateb_users u ORDER BY u.created_at DESC LIMIT 50");
         $rows = $stmt->fetchAll();
-        $planLimits = ['free' => [5, 15], 'basic' => [100, 200], 'pro' => [500, 1000]];
+        $planLimits = ['free' => [10, 15], 'basic' => [100, 200], 'pro' => [500, 1000]];
         $enriched = [];
         foreach ($rows as $r) {
             $planId = $r['plan_type'] ?? 'free';
