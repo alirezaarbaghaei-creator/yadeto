@@ -13,6 +13,7 @@ import {
   Phone,
   CheckCircle2,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -40,6 +41,17 @@ function useNavItems(): NavItem[] {
   const user = useAuthStore((s) => s.user);
   if (user?.is_admin) return [...baseNavItems, adminNavItem, accountNavItem];
   return [...baseNavItems, accountNavItem];
+}
+
+function BrandLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const dims = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-9 w-9' : 'h-11 w-11';
+  const iconSize = size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
+
+  return (
+    <div className={`flex ${dims} shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 shadow-lg shadow-primary-900/20`}>
+      <Sparkles className={`${iconSize} text-white`} />
+    </div>
+  );
 }
 
 export function AccountModal({ onClose }: { onClose: () => void }) {
@@ -103,20 +115,20 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.92, y: 20 }}
+        initial={{ scale: 0.94, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 20 }}
+        exit={{ scale: 0.94, y: 20 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-sky-500" />
+            <Settings className="h-5 w-5 text-primary-600" />
             <h3 className="text-lg font-bold text-slate-900">حساب کاربری</h3>
           </div>
           <button
@@ -131,13 +143,13 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">شماره موبایل</label>
             <div className="relative">
-              <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-500" />
+              <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-500" />
               <input
                 type="tel"
                 value={user?.phone ?? ''}
                 readOnly
                 dir="ltr"
-                className="w-full rounded-xl border border-sky-100 bg-white py-3 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
+                className="w-full rounded-xl border border-primary-100 bg-white py-3 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
               />
             </div>
             <p className="mt-1 text-[10px] text-slate-400">شماره موبایل قابل ویرایش نیست.</p>
@@ -174,7 +186,7 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
 
           <div className="border-t border-slate-100 pt-4">
             <div className="mb-3 flex items-center gap-2">
-              <Settings className="h-4 w-4 text-sky-500" />
+              <Settings className="h-4 w-4 text-primary-500" />
               <h4 className="text-sm font-bold text-slate-800">تغییر رمز عبور</h4>
             </div>
             <div className="space-y-2.5">
@@ -202,7 +214,7 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={handlePasswordChange}
                 disabled={savingPassword}
-                className="w-full rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-colors hover:bg-sky-700 disabled:opacity-50"
+                className="w-full rounded-xl bg-primary-700 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-700/20 transition-colors hover:bg-primary-800 disabled:opacity-50"
               >
                 {savingPassword ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'تغییر رمز عبور'}
               </button>
@@ -212,7 +224,7 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/30 disabled:opacity-50"
           >
             {saving ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -302,13 +314,12 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
         exit={{ x: '-100%' }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="absolute left-0 top-0 flex h-full w-[min(86vw,360px)] flex-col overflow-hidden bg-white text-slate-900 shadow-2xl"
-        style={{ backgroundColor: '#ffffff' }}
         dir="rtl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex min-h-[72px] shrink-0 items-center justify-between border-b border-slate-100 px-5 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white font-bold">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 text-white font-bold">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -325,17 +336,17 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="flex-1 space-y-2.5 overflow-hidden bg-white px-4 py-3" style={{ backgroundColor: '#ffffff' }}>
+        <div className="flex-1 space-y-2.5 overflow-hidden bg-white px-4 py-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">شماره موبایل</label>
             <div className="relative">
-              <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-500" />
+              <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-500" />
               <input
                 type="tel"
                 value={user?.phone ?? ''}
                 readOnly
                 dir="ltr"
-                className="w-full rounded-xl border border-sky-100 bg-white py-2 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
+                className="w-full rounded-xl border border-primary-100 bg-white py-2 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
               />
             </div>
             <p className="mt-0.5 text-[10px] text-slate-400">شماره موبایل قابل ویرایش نیست.</p>
@@ -344,7 +355,7 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">نام و نام خانوادگی</label>
             <div className="relative">
-              <User className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <User className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={fullName}
@@ -373,14 +384,14 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-2.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-2.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/30 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ذخیره تغییرات'}
           </button>
 
           <div className="border-t border-slate-100 pt-2.5">
             <div className="mb-2 flex items-center gap-2">
-              <Settings className="h-4 w-4 text-sky-500" />
+              <Settings className="h-4 w-4 text-primary-500" />
               <h4 className="text-sm font-bold text-slate-800">تغییر رمز عبور</h4>
             </div>
             <div className="space-y-2">
@@ -408,7 +419,7 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
               <button
                 onClick={handlePasswordChange}
                 disabled={savingPassword}
-                className="w-full rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-colors hover:bg-sky-700 disabled:opacity-50"
+                className="w-full rounded-xl bg-primary-700 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-700/20 transition-colors hover:bg-primary-800 disabled:opacity-50"
               >
                 {savingPassword ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'تغییر رمز عبور'}
               </button>
@@ -439,14 +450,12 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed top-0 right-0 h-screen w-64 flex-col border-l border-slate-200/60 glass z-40">
+      <aside className="hidden lg:flex fixed top-0 right-0 h-screen w-64 flex-col border-l border-slate-200/50 bg-white/80 backdrop-blur-xl z-40">
         <div className="flex items-center gap-3 px-6 py-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-lg shadow-indigo-500/30">
-            <CalendarDays className="h-6 w-6 text-white" />
-          </div>
+          <BrandLogo />
           <div>
-            <h1 className="text-lg font-bold text-slate-900">تقویم هوشمند</h1>
-            <p className="text-xs text-slate-500">مدیریت زمان و کارها</p>
+            <h1 className="text-lg font-bold text-slate-900">یادتو</h1>
+            <p className="text-[11px] text-slate-500">همراه هوشمند زندگی تو</p>
           </div>
         </div>
 
@@ -460,13 +469,13 @@ export function Sidebar() {
                 onClick={() => setPage(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100/60'
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <Icon className={`h-5 w-5 ${active ? 'text-primary-600' : 'text-slate-400'}`} />
                 {item.label}
-                {active && <span className="mr-auto h-2 w-2 rounded-full bg-indigo-500" />}
+                {active && <span className="mr-auto h-1.5 w-1.5 rounded-full bg-primary-600" />}
               </button>
             );
           })}
@@ -475,27 +484,29 @@ export function Sidebar() {
         <div className="px-3 pb-6 space-y-3">
           <CreditBadge />
 
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 p-4 text-white">
-            <MessageCircle className="h-6 w-6 mb-2" />
-            <p className="text-sm font-semibold">دستیار هوشمند</p>
-            <p className="text-xs text-indigo-100 mt-1">
+          <div className="rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 p-4 text-white shadow-lg shadow-primary-900/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-accent-300" />
+              <p className="text-sm font-semibold">دستیار هوشمند</p>
+            </div>
+            <p className="text-xs text-primary-100 leading-relaxed">
               کار و رویداد را با یک جمله فارسی ثبت کن
             </p>
             <button
               onClick={() => setPage('assistant')}
-              className="mt-3 w-full rounded-lg bg-white/20 hover:bg-white/30 transition-colors py-2 text-xs font-medium"
+              className="mt-3 w-full rounded-xl bg-white/10 hover:bg-white/20 transition-colors py-2 text-xs font-medium"
             >
               شروع گفتگو
             </button>
           </div>
 
           {user && (
-            <div className="rounded-2xl glass p-3 space-y-2">
+            <div className="rounded-2xl bg-white border border-slate-200/60 p-3 space-y-2">
               <button
                 onClick={() => setPage(user?.is_admin ? 'admin' : 'account')}
-                className="w-full flex items-center gap-3 text-right hover:bg-slate-100/60 rounded-xl p-2 transition-colors"
+                className="w-full flex items-center gap-3 text-right hover:bg-slate-50 rounded-xl p-2 transition-colors"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white text-sm font-bold">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-900 text-white text-sm font-bold">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -528,7 +539,7 @@ export function BottomNav() {
   const navItems = useNavItems();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-white/60">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/85 backdrop-blur-xl border-t border-slate-200/50">
       <div className="flex items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -542,7 +553,7 @@ export function BottomNav() {
               <div
                 className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
                   active
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105'
+                    ? 'bg-primary-700 text-white shadow-lg shadow-primary-700/25 scale-105'
                     : 'text-slate-400'
                 }`}
               >
@@ -550,7 +561,7 @@ export function BottomNav() {
               </div>
               <span
                 className={`text-[10px] font-medium ${
-                  active ? 'text-indigo-600' : 'text-slate-400'
+                  active ? 'text-primary-700' : 'text-slate-400'
                 }`}
               >
                 {item.label}

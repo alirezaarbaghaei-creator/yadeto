@@ -12,6 +12,9 @@ import {
   Crown,
   Zap,
   Gift,
+  Sparkles,
+  Bell,
+  Shield,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -19,7 +22,6 @@ import { usePlanStore } from '@/store/planStore';
 import { PLANS } from '@/data/plans';
 import * as api from '@/lib/api';
 
-/** Shown in the account page. Keep in sync with android/app/build.gradle. */
 const APP_VERSION_LABEL = '1.6.9';
 const APP_BUILD_NUMBER = '16';
 
@@ -30,6 +32,10 @@ export function AccountPage() {
   const signOut = useAuthStore((s) => s.signOut);
   const planType = usePlanStore((s) => s.planType);
   const expiresAt = usePlanStore((s) => s.expiresAt);
+  const aiAssistantUsage = usePlanStore((s) => s.aiAssistantUsage);
+  const templateUsage = usePlanStore((s) => s.templateUsage);
+  const getAiAssistantLimit = usePlanStore((s) => s.getAiAssistantLimit);
+  const getTemplateLimit = usePlanStore((s) => s.getTemplateLimit);
   const currentPlan = PLANS.find((p) => p.id === planType);
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [password, setPassword] = useState('');
@@ -39,6 +45,11 @@ export function AccountPage() {
   const [saved, setSaved] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
   const [error, setError] = useState('');
+
+  const aiLimit = getAiAssistantLimit();
+  const templateLimit = getTemplateLimit();
+  const aiRemaining = aiLimit - aiAssistantUsage;
+  const templateRemaining = templateLimit - templateUsage;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,8 +94,22 @@ export function AccountPage() {
 
   return (
     <div className="space-y-5">
+      {/* Back header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setPage('home')}
+          className="flex h-10 w-10 items-center justify-center rounded-xl card-base text-slate-600 hover:text-slate-900 transition-colors"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Settings className="h-5 w-5 text-primary-600" />
+          <h2 className="text-xl font-bold text-slate-900">حساب کاربری</h2>
+        </div>
+      </div>
+
       {/* Subscription card */}
-      <div className="glass rounded-2xl p-5 shadow-glass">
+      <div className="card-premium rounded-2xl p-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${currentPlan?.gradient ?? 'from-slate-400 to-slate-600'} text-white shadow-lg`}>
@@ -106,42 +131,43 @@ export function AccountPage() {
           {planType !== 'pro' && (
             <button
               onClick={() => setPage('pricing')}
-              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30"
+              className="flex items-center gap-1.5 rounded-xl bg-primary-700 text-white px-4 py-2 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25"
             >
               <Crown className="h-4 w-4" />
               ارتقای طرح
             </button>
           )}
         </div>
-      </div>
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setPage('home')}
-          className="flex h-10 w-10 items-center justify-center rounded-xl glass text-slate-600 hover:text-slate-900 shadow-glass"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Settings className="h-5 w-5 text-sky-500" />
-          <h2 className="text-xl font-bold text-slate-900">حساب کاربری</h2>
+        {/* Usage stats */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-primary-50 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary-600" />
+              <p className="text-xs font-semibold text-primary-700">پیام دستیار</p>
+            </div>
+            <p className="text-sm font-bold text-slate-800">
+              {aiRemaining.toLocaleString('fa-IR')} / {aiLimit.toLocaleString('fa-IR')}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">در روز</p>
+          </div>
+          <div className="rounded-xl bg-accent-50 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Gift className="h-4 w-4 text-accent-600" />
+              <p className="text-xs font-semibold text-accent-700">ثبت خودکار</p>
+            </div>
+            <p className="text-sm font-bold text-slate-800">
+              {templateRemaining.toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">در روز</p>
+          </div>
         </div>
       </div>
 
-      {/* App version */}
-      <div className="glass rounded-2xl p-5 shadow-glass">
-        <p className="text-xs text-slate-500">نسخه برنامه</p>
-        <p className="mt-1 text-sm font-semibold text-slate-800" dir="ltr">
-          {APP_VERSION_LABEL} ({APP_BUILD_NUMBER})
-        </p>
-      </div>
-
       {/* Profile card */}
-      <div className="glass rounded-2xl p-5 shadow-glass">
-        {/* Avatar + name */}
+      <div className="card-base rounded-2xl p-5">
         <div className="flex items-center gap-3 mb-5 pb-5 border-b border-slate-100">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white text-xl font-bold">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 text-white text-xl font-bold shadow-lg">
             {(user?.full_name || user?.phone || 'ک').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -150,23 +176,21 @@ export function AccountPage() {
           </div>
         </div>
 
-        {/* Phone (read-only) */}
         <div className="mb-4">
           <label className="mb-1.5 block text-xs font-medium text-slate-600">شماره موبایل</label>
           <div className="relative">
-            <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-500" />
+            <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-500" />
             <input
               type="tel"
               value={user?.phone ?? ''}
               readOnly
               dir="ltr"
-              className="w-full rounded-xl border border-sky-100 bg-white py-3 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
+              className="w-full rounded-xl border border-primary-100 bg-white py-3 pl-4 pr-11 text-sm font-semibold text-slate-800 text-left outline-none"
             />
           </div>
           <p className="mt-1 text-[10px] text-slate-400">شماره موبایل قابل ویرایش نیست.</p>
         </div>
 
-        {/* Full name */}
         <form onSubmit={handleSave} className="mb-4">
           <label className="mb-1.5 block text-xs font-medium text-slate-600">نام و نام خانوادگی</label>
           <div className="relative mb-3">
@@ -198,16 +222,15 @@ export function AccountPage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ذخیره تغییرات'}
           </button>
         </form>
 
-        {/* Password change */}
         <div className="border-t border-slate-100 pt-4">
           <div className="mb-3 flex items-center gap-2">
-            <Settings className="h-4 w-4 text-sky-500" />
+            <Shield className="h-4 w-4 text-primary-500" />
             <h4 className="text-sm font-bold text-slate-800">تغییر رمز عبور</h4>
           </div>
           <div className="space-y-2.5">
@@ -235,12 +258,20 @@ export function AccountPage() {
             <button
               onClick={handlePasswordChange}
               disabled={savingPassword}
-              className="w-full rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-colors hover:bg-sky-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-primary-700 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-700/20 transition-colors hover:bg-primary-800 disabled:opacity-50"
             >
               {savingPassword ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'تغییر رمز عبور'}
             </button>
           </div>
         </div>
+      </div>
+
+      {/* App version */}
+      <div className="card-base rounded-2xl p-4 flex items-center justify-between">
+        <p className="text-xs text-slate-500">نسخه برنامه</p>
+        <p className="text-sm font-semibold text-slate-800" dir="ltr">
+          {APP_VERSION_LABEL} ({APP_BUILD_NUMBER})
+        </p>
       </div>
 
       {/* Sign out */}
@@ -254,4 +285,3 @@ export function AccountPage() {
     </div>
   );
 }
-
