@@ -28,13 +28,13 @@ export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardP
   const priority = PRIORITY_STYLES[task.priority];
 
   return (
-    <div className="glass flex items-center gap-3 rounded-2xl border border-white/60 p-3">
+    <div className="card-base flex items-center gap-3 rounded-2xl p-3">
       <button
         onClick={() => onToggle(task)}
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
           isCompleted
             ? 'border-green-500 bg-green-500 text-white'
-            : 'border-slate-300 hover:border-indigo-400'
+            : 'border-slate-300 hover:border-primary-400'
         }`}
         aria-label={isCompleted ? 'انجام نشده' : 'انجام شد'}
       >
@@ -63,7 +63,7 @@ export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardP
             {priority.label}
           </span>
           {task.recurrence !== 'none' && (
-            <span className="flex items-center gap-1 text-[10px] text-teal-600">
+            <span className="flex items-center gap-1 text-[10px] text-accent-600">
               <Repeat className="h-3 w-3" />
               {RECURRENCE_LABELS[task.recurrence]}
             </span>
@@ -75,7 +75,7 @@ export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardP
         {onEdit && (
           <button
             onClick={() => onEdit(task)}
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-500"
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-primary-500"
             aria-label="ویرایش کار"
           >
             <Pencil className="h-4 w-4" />

@@ -24,7 +24,7 @@ export function EventCard({ event, compact, onDelete, onEdit }: EventCardProps) 
 
   return (
     <div
-      className={`glass flex overflow-hidden rounded-2xl border border-white/60 ${
+      className={`card-base flex overflow-hidden rounded-2xl ${
         compact ? 'py-2' : ''
       }`}
     >
@@ -51,7 +51,7 @@ export function EventCard({ event, compact, onDelete, onEdit }: EventCardProps) 
             {onEdit && (
               <button
                 onClick={() => onEdit(event)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-500"
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-primary-500"
                 aria-label="ویرایش رویداد"
               >
                 <Pencil className="h-4 w-4" />

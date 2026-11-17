@@ -90,7 +90,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
 
   const chip = (active: boolean, activeCls: string) =>
     `rounded-full border px-3 py-1.5 text-xs transition-all ${
-      active ? activeCls : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-300'
+      active ? activeCls : 'border-slate-200 bg-white text-slate-500 hover:border-primary-300'
     }`;
 
   return (
@@ -98,7 +98,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-glass-lg sm:rounded-3xl"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-card-lg sm:rounded-3xl"
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-800">
@@ -128,13 +128,13 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
             <label className="mb-1 block text-xs text-slate-500">تاریخ</label>
             <button
               onClick={() => setShowCalendar((v) => !v)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:border-indigo-300"
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:border-primary-300"
             >
               <span className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-indigo-500" />
+                <CalendarIcon className="h-4 w-4 text-primary-600" />
                 {formatJalali(selectedJalali, 'long')}
               </span>
-              <span className="text-xs text-indigo-500">تغییر</span>
+              <span className="text-xs text-primary-600">تغییر</span>
             </button>
             {showCalendar && (
               <div className="mt-2">
@@ -168,7 +168,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
             <div>
               <label className="mb-1 block text-xs text-slate-500">ساعت شروع</label>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0 text-indigo-500" />
+                <Clock className="h-4 w-4 shrink-0 text-primary-600" />
                 <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت شروع">
                   {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
                 </select>
@@ -181,7 +181,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                   onClick={() => setHasEndTime((v) => !v)}
                   className={`rounded-full border px-2 py-0.5 text-[10px] transition-all ${
                     hasEndTime
-                      ? 'border-indigo-400 bg-indigo-50 text-indigo-600'
+                      ? 'border-primary-400 bg-primary-50 text-primary-700'
                       : 'border-slate-200 text-slate-400'
                   }`}
                 >
@@ -196,7 +196,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                 <button
                   type="button"
                   onClick={() => setHasEndTime(true)}
-                  className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-center text-xs text-slate-400 hover:border-indigo-300 hover:text-indigo-500"
+                  className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-center text-xs text-slate-400 hover:border-primary-300 hover:text-primary-600"
                 >
                   افزودن ساعت پایان
                 </button>
@@ -207,7 +207,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
           <div>
             <label className="mb-1 block text-xs text-slate-500">مکان (اختیاری)</label>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-              <MapPin className="h-4 w-4 text-indigo-500" />
+              <MapPin className="h-4 w-4 text-primary-600" />
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -224,7 +224,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                 <button
                   key={c.value}
                   onClick={() => setCategory(c.value)}
-                  className={chip(category === c.value, 'border-indigo-400 bg-indigo-50 text-indigo-600')}
+                  className={chip(category === c.value, 'border-primary-400 bg-primary-50 text-primary-700')}
                 >
                   {c.label}
                 </button>
@@ -256,7 +256,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
         <button
           onClick={handleSave}
           disabled={!title.trim()}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-700 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-800 disabled:opacity-50"
         >
           <CalendarPlus className="h-4 w-4" />
           ذخیره
