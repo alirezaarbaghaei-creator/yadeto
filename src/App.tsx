@@ -179,9 +179,9 @@ function AppShell() {
       <OfflineBanner />
       {/* Ambient background blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-indigo-200/30 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 h-96 w-96 rounded-full bg-cyan-200/20 blur-3xl" />
-        <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-indigo-100/40 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />
+        <div className="absolute top-1/2 -left-40 h-96 w-96 rounded-full bg-accent-200/20 blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-primary-100/30 blur-3xl" />
       </div>
 
       <Sidebar />

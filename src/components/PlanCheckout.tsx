@@ -212,7 +212,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
                         onClick={() => setSelectedMonths(opt.months)}
                         className={`relative rounded-xl border-2 p-3 text-center transition-all ${
                           isSelected
-                            ? 'border-cyan-500 bg-cyan-50 shadow-md shadow-cyan-500/10'
+                            ? 'border-primary-500 bg-primary-50 shadow-md shadow-primary-500/10'
                             : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
@@ -221,10 +221,10 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
                             {opt.badge}
                           </span>
                         )}
-                        <p className={`text-sm font-bold ${isSelected ? 'text-cyan-700' : 'text-slate-700'}`}>
+                        <p className={`text-sm font-bold ${isSelected ? 'text-primary-700' : 'text-slate-700'}`}>
                           {opt.label}
                         </p>
-                        <p className={`text-[10px] mt-0.5 ${isSelected ? 'text-cyan-500' : 'text-slate-400'}`}>
+                        <p className={`text-[10px] mt-0.5 ${isSelected ? 'text-primary-500' : 'text-slate-400'}`}>
                           {formatToman(total)} ت
                         </p>
                       </button>
@@ -276,7 +276,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
 
               <button
                 onClick={handlePayment}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3.5 text-sm font-bold hover:shadow-lg shadow-cyan-500/30 transition-all"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3.5 text-sm font-bold hover:bg-primary-800 hover:shadow-lg shadow-primary-700/25 transition-all"
               >
                 <CreditCard className="h-5 w-5" />
                 پرداخت {formatToman(discountedTotal)} تومان
@@ -286,7 +286,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
 
           {state === 'purchasing' && (
             <div className="text-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin text-cyan-500 mx-auto mb-5" />
+              <Loader2 className="h-12 w-12 animate-spin text-primary-500 mx-auto mb-5" />
               <h4 className="text-base font-bold text-slate-900 mb-1">
                 {isAndroid ? 'در حال اتصال به کافه‌بازار...' : 'در حال انتقال به درگاه پرداخت'}
               </h4>
@@ -296,7 +296,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
 
           {state === 'verifying' && (
             <div className="text-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin text-cyan-500 mx-auto mb-5" />
+              <Loader2 className="h-12 w-12 animate-spin text-primary-500 mx-auto mb-5" />
               <h4 className="text-base font-bold text-slate-900 mb-1">در حال تأیید پرداخت...</h4>
               <p className="text-sm text-slate-500">لطفاً صبر کنید...</p>
             </div>
@@ -328,7 +328,7 @@ export function PlanCheckout({ planId, userId, onClose, onSuccess }: PlanCheckou
                 </button>
                 <button
                   onClick={handlePayment}
-                  className="flex-1 rounded-xl bg-cyan-600 text-white py-3 text-sm font-semibold hover:bg-cyan-700 transition-colors"
+                  className="flex-1 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors"
                 >
                   تلاش مجدد
                 </button>

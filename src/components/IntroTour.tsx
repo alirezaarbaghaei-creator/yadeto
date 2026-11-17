@@ -20,28 +20,28 @@ interface Slide {
 const slides: Slide[] = [
   {
     Icon: CalendarDays,
-    grad: 'from-sky-500 to-indigo-500',
-    title: 'به تقویم هوشمند خوش آمدید',
-    desc: 'سلام! با «تقویم هوشمند» برنامه زندگیت رو یک‌جا داشته باش: تقویم جلالی با مناسبت‌ها و تعطیلات رسمی، کارها و رویدادها با یادآوری — همه با یک اپ ساده و فارسی.',
+    grad: 'from-primary-600 to-primary-900',
+    title: 'به یادتو خوش آمدید',
+    desc: 'سلام! با «یادتو» برنامه زندگیت رو یک‌جا داشته باش: تقویم جلالی با مناسبت‌ها و تعطیلات رسمی، کارها و رویدادها با یادآوری — همه با یک اپ ساده و فارسی.',
     points: ['تقویم جلالی، میلادی و قمری در یک نگاه', 'شروع رایگان و بدون تنظیمات پیچیده'],
   },
   {
     Icon: ListTodo,
-    grad: 'from-violet-500 to-fuchsia-500',
+    grad: 'from-accent-500 to-accent-700',
     title: 'کارها و رویدادها',
     desc: 'کار روزانه، جلسه، قرار دوستانه یا یادآوری قبض — با اولویت، دسته‌بندی و تکرار (روزانه، هفتگی، ماهانه). تقویم هوشمند بهت نشون می‌ده هر روز چند ساعت وقت آزاد داری!',
     points: ['کار با اولویت و دسته‌بندی؛ رویداد با ساعت و مکان', 'تکرار خودکار برای کارهای دوره‌ای'],
   },
   {
     Icon: Sparkles,
-    grad: 'from-emerald-500 to-teal-500',
+    grad: 'from-primary-700 to-accent-700',
     title: 'دستیار هوشمند با زبان طبیعی',
     desc: 'فقط به فارسی بنویس «فردا ساعت ۱۰ جلسه دارم» — دستیار هوشمند خودش تاریخ جلالی رو می‌فهمه، ثبت می‌کنه و یادآوری می‌سازه. برنامه امروز، زمان آزاد و گزارش هفتگی رو هم بلده!',
     points: ['ثبت کار و رویداد با یک جمله فارسی', 'خلاصه هوشمند روز و گزارش هفتگی'],
   },
   {
     Icon: BellRing,
-    grad: 'from-orange-500 to-rose-500',
+    grad: 'from-amber-500 to-rose-500',
     title: 'یادآوری و همگام‌سازی',
     desc: 'یادآوری‌ها دقیقاً قبل از هر کار و رویداد می‌رسن، حتی وقتی اپ بسته‌ست. با حساب کاربری، داده‌هات بین گوشی‌هات همگام می‌شن — خیالت راحت.',
     points: ['یادآوری محلی اندروید با زمان‌بندی دقیق', 'همگام‌سازی امن با حساب کاربری'],
@@ -86,9 +86,9 @@ export function IntroTour({ onDone }: { onDone: () => void }) {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-surface" style={{ minHeight: '100dvh' }}>
       {/* Ambient blobs — same vibe as the auth page */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-sky-300/40 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-indigo-300/30 blur-3xl" />
-        <div className="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary-300/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-primary-300/25 blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-accent-200/30 blur-3xl" />
       </div>
 
       <div className="relative mx-auto flex min-h-full w-full max-w-lg flex-col px-5 py-6">
@@ -130,8 +130,8 @@ export function IntroTour({ onDone }: { onDone: () => void }) {
                 <ul className="mt-5 space-y-2.5 text-right">
                   {slide.points.map((p) => (
                     <li key={p} className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-2.5">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-100">
-                        <Check className="h-3 w-3 text-sky-600" />
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100">
+                        <Check className="h-3 w-3 text-primary-600" />
                       </span>
                       <span className="text-[13px] text-slate-600">{p}</span>
                     </li>
@@ -146,13 +146,13 @@ export function IntroTour({ onDone }: { onDone: () => void }) {
           <div className="mb-5 flex items-center justify-center gap-2">
             {slides.map((_, i) => (
               <button key={i} type="button" onClick={() => jumpTo(i)} aria-label={`مرحله ${i + 1}`}
-                className={`h-2.5 rounded-full transition-all duration-300 ${i === index ? 'w-7 bg-sky-600' : 'w-2.5 bg-slate-300 hover:bg-slate-400'}`} />
+                className={`h-2.5 rounded-full transition-all duration-300 ${i === index ? 'w-7 bg-primary-700' : 'w-2.5 bg-slate-300 hover:bg-slate-400'}`} />
             ))}
           </div>
 
           <div className="flex items-center gap-3">
             <button type="button" onClick={isLast ? onDone : goNext}
-              className="focus-ring flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition-colors hover:bg-sky-700">
+              className="focus-ring flex w-full items-center justify-center gap-2 rounded-xl bg-primary-700 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary-700/30 transition-colors hover:bg-primary-800">
               {isLast ? 'شروع کنید' : 'بعدی'}
               {isLast ? <Check className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
             </button>

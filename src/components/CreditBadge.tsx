@@ -38,7 +38,7 @@ export function CreditBadge({ compact = false }: { compact?: boolean }) {
           isLowCredits
             ? 'bg-red-50 text-red-600'
             : isPaidPlan
-              ? 'bg-indigo-50 text-indigo-600'
+              ? 'bg-primary-50 text-primary-700'
               : 'bg-slate-100 text-slate-600'
         }`}
         title="مشاهده پلن‌ها"
@@ -52,11 +52,11 @@ export function CreditBadge({ compact = false }: { compact?: boolean }) {
   return (
     <button
       onClick={handleClick}
-      className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all hover:shadow-md text-right ${
+      className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all hover:shadow-card-hover text-right ${
         isLowCredits
           ? 'bg-red-50 border border-red-100'
           : isPaidPlan
-            ? 'bg-indigo-50 border border-indigo-100'
+            ? 'bg-primary-50 border border-primary-100'
             : 'bg-slate-50 border border-slate-100'
       }`}
     >
@@ -65,7 +65,7 @@ export function CreditBadge({ compact = false }: { compact?: boolean }) {
           isLowCredits
             ? 'bg-red-100 text-red-500'
             : isPaidPlan
-              ? 'bg-indigo-100 text-indigo-600'
+              ? 'bg-primary-100 text-primary-600'
               : 'bg-slate-200 text-slate-500'
         }`}
       >
@@ -74,7 +74,7 @@ export function CreditBadge({ compact = false }: { compact?: boolean }) {
       <div className="flex-1 min-w-0">
         <p
           className={`text-xs font-bold ${
-            isLowCredits ? 'text-red-600' : isPaidPlan ? 'text-indigo-700' : 'text-slate-700'
+            isLowCredits ? 'text-red-600' : isPaidPlan ? 'text-primary-700' : 'text-slate-700'
           }`}
         >
           طرح {plan?.name}
@@ -95,7 +95,7 @@ export function CreditBadge({ compact = false }: { compact?: boolean }) {
         </span>
       )}
       {planType === 'pro' && !isLowCredits && (
-        <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+        <Sparkles className="h-4 w-4 text-primary-400 shrink-0" />
       )}
     </button>
   );

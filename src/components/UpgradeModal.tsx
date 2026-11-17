@@ -47,7 +47,7 @@ export function UpgradeModal() {
           >
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-950 text-white">
                   <Lock className="h-5 w-5" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">ارتقای طرح</h3>
@@ -78,8 +78,8 @@ export function UpgradeModal() {
                     }}
                     className={`text-right rounded-2xl border-2 p-5 transition-all hover:shadow-lg group ${
                       plan.popular
-                        ? 'border-indigo-300 bg-indigo-50/30'
-                        : 'border-slate-100 hover:border-indigo-300'
+                        ? 'border-primary-300 bg-primary-50/30'
+                        : 'border-slate-100 hover:border-primary-300'
                     }`}
                   >
                     <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${plan.gradient} text-white mb-3`}>
@@ -98,7 +98,7 @@ export function UpgradeModal() {
                         {plan.templateLimit.toLocaleString('fa-IR')} ثبت خودکار در روز
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 group-hover:gap-2 transition-all">
+                    <div className="flex items-center gap-1 mt-3 text-sm font-semibold text-primary-600 group-hover:gap-2 transition-all">
                       انتخاب طرح
                       <ArrowRight className="h-4 w-4" />
                     </div>
