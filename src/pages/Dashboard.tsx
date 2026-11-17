@@ -10,6 +10,7 @@ import {
   PartyPopper,
   ArrowLeft,
   Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useCalendarStore } from '@/store/calendarStore';
@@ -27,7 +28,6 @@ import {
   getHijriForDate,
   formatHijri,
   getGregorianForJalali,
-  formatGregorian,
 } from '@/utils/jalaliDate';
 import type { CalendarEvent, Task } from '@/types/calendar';
 
@@ -78,6 +78,14 @@ export function Dashboard() {
 
   const todayEvents = useMemo(() => events.filter((e) => e.date === todayISO), [events, todayISO]);
 
+  const completedToday = useMemo(
+    () => getVisibleTasksForDate(tasks, todayISO).filter((t) => t.status === 'completed').length,
+    [tasks, todayISO],
+  );
+
+  const totalToday = todayTasks.length + completedToday;
+  const progressPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
+
   const aiSummary = useMemo(
     () => calendarAi.generateDailySummary(todayTasks.length, todayEvents.length, schedule.freeMinutes),
     [todayTasks.length, todayEvents.length, schedule.freeMinutes],
@@ -89,40 +97,39 @@ export function Dashboard() {
   );
 
   const stats = [
-    { label: 'کارهای امروز', value: toFaDigits(String(todayTasks.length)), icon: ListTodo, cls: 'bg-indigo-50 text-indigo-600' },
-    { label: 'رویدادهای امروز', value: toFaDigits(String(todayEvents.length)), icon: CalendarDays, cls: 'bg-sky-50 text-sky-600' },
-    { label: 'زمان آزاد', value: formatFreeTime(schedule.freeMinutes), icon: Coffee, cls: 'bg-teal-50 text-teal-600' },
+    { label: 'کارهای امروز', value: toFaDigits(String(todayTasks.length)), icon: ListTodo, cls: 'bg-primary-50 text-primary-600' },
+    { label: 'رویدادهای امروز', value: toFaDigits(String(todayEvents.length)), icon: CalendarDays, cls: 'bg-accent-50 text-accent-600' },
+    { label: 'زمان آزاد', value: formatFreeTime(schedule.freeMinutes), icon: Coffee, cls: 'bg-cyan-50 text-cyan-600' },
   ];
 
   const g = getGregorianForJalali(today);
   const hijri = formatHijri(getHijriForDate(g.gy, g.gm, g.gd));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Hero greeting */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="hero-workflow relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 p-6 sm:p-8 text-white shadow-xl shadow-slate-950/20"
+        className="hero-glow relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-900 via-primary-950 to-slate-950 p-6 sm:p-8 text-white shadow-premium"
       >
-        <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-cyan-400/20 blur-2xl" />
-        <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-sky-400/10 blur-3xl" />
+        <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-accent-400/8 blur-3xl" />
         <div className="relative z-10">
-          <div className="flex items-center gap-2 text-teal-300 text-sm mb-2">
+          <div className="flex items-center gap-2 text-accent-300 text-sm mb-2">
             <Sparkles className="h-4 w-4" />
             {formatJalali(today, 'full')}
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-            {greetingName ? `سلام، ${greetingName}` : 'تقویم هوشمند'}
+            {greetingName ? `سلام، ${greetingName}` : 'یادتو'}
           </h2>
-          <p className="text-teal-100 text-sm sm:text-base max-w-md leading-relaxed" dir="ltr" style={{ textAlign: 'right' }}>
+          <p className="text-accent-100 text-sm sm:text-base max-w-md leading-relaxed" dir="ltr" style={{ textAlign: 'right' }}>
             {hijri}
           </p>
 
           {todayHoliday && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs text-amber-200 backdrop-blur-sm">
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-white/8 px-3 py-2 text-xs text-amber-200">
               <PartyPopper className="h-4 w-4 shrink-0" />
               <span>
                 {todayHoliday.title}
@@ -131,30 +138,48 @@ export function Dashboard() {
             </div>
           )}
 
+          {/* Progress bar */}
+          {totalToday > 0 && (
+            <div className="mt-5">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="text-primary-200">پیشرفت امروز</span>
+                <span className="font-bold text-white">{toFaDigits(String(progressPct))}٪</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPct}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+                  className="h-full rounded-full bg-gradient-to-r from-accent-400 to-accent-500"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Quick actions */}
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               onClick={() => { setEditingTask(null); setTaskModalOpen(true); }}
-              className="group flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm transition-all hover:bg-white/20"
+              className="group flex items-center gap-3 rounded-2xl bg-white/8 p-3.5 transition-all hover:bg-white/15"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/30 transition-transform group-hover:scale-110">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/20 transition-transform group-hover:scale-110">
                 <Plus className="h-5 w-5" />
               </div>
               <div className="flex-1 text-right">
                 <p className="text-sm font-bold text-white">کار جدید</p>
-                <p className="text-[11px] text-teal-200 mt-0.5">ثبت سریع کار</p>
+                <p className="text-[11px] text-primary-200 mt-0.5">ثبت سریع کار</p>
               </div>
             </button>
             <button
               onClick={() => { setEditingEvent(null); setEventModalOpen(true); }}
-              className="group flex items-center gap-3 rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm transition-all hover:bg-white/20"
+              className="group flex items-center gap-3 rounded-2xl bg-white/8 p-3.5 transition-all hover:bg-white/15"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 text-white shadow-lg shadow-sky-500/30 transition-transform group-hover:scale-110">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-white shadow-lg shadow-cyan-500/20 transition-transform group-hover:scale-110">
                 <Plus className="h-5 w-5" />
               </div>
               <div className="flex-1 text-right">
                 <p className="text-sm font-bold text-white">رویداد جدید</p>
-                <p className="text-[11px] text-teal-200 mt-0.5">جلسه یا قرار</p>
+                <p className="text-[11px] text-primary-200 mt-0.5">جلسه یا قرار</p>
               </div>
             </button>
           </div>
@@ -172,7 +197,7 @@ export function Dashboard() {
               variants={fadeUp}
               initial="hidden"
               animate="show"
-              className="glass rounded-2xl p-4 sm:p-5 shadow-glass"
+              className="card-base rounded-2xl p-4 sm:p-5 transition-shadow hover:shadow-card-hover"
             >
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.cls} mb-3`}>
                 <Icon className="h-5 w-5" />
@@ -190,16 +215,16 @@ export function Dashboard() {
         variants={fadeUp}
         initial="hidden"
         animate="show"
-        className="glass rounded-2xl p-5 shadow-glass"
+        className="card-base rounded-2xl p-5"
       >
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-            <Clock className="h-4 w-4 text-indigo-500" />
+            <Clock className="h-4 w-4 text-primary-500" />
             برنامه امروز
           </h3>
           <button
             onClick={() => setPage('calendar')}
-            className="flex items-center gap-1 text-sm text-sky-600 hover:text-sky-700 font-medium"
+            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             تقویم
             <ArrowLeft className="h-4 w-4" />
@@ -217,7 +242,7 @@ export function Dashboard() {
                   {toFaDigits(item.time)}
                 </span>
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                <div className="flex-1 truncate rounded-xl bg-slate-50/80 px-3 py-2.5 text-sm text-slate-700">
+                <div className="flex-1 truncate rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
                   {item.title}
                 </div>
               </div>
@@ -232,20 +257,23 @@ export function Dashboard() {
         variants={fadeUp}
         initial="hidden"
         animate="show"
-        className="rounded-3xl bg-gradient-to-br from-indigo-600 to-teal-700 p-5 text-white shadow-lg shadow-indigo-500/20"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-800 to-accent-800 p-5 text-white shadow-lg shadow-primary-900/20"
       >
-        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-          <Sparkles className="h-4 w-4" />
-          خلاصه هوشمند امروز
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5 blur-2xl" />
+        <div className="relative z-10">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-accent-300" />
+            خلاصه هوشمند امروز
+          </div>
+          <p className="whitespace-pre-line text-sm leading-6 text-primary-100">{aiSummary}</p>
+          <button
+            onClick={() => setPage('assistant')}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/12 py-2.5 text-xs font-semibold transition-colors hover:bg-white/20"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            گفتگو با دستیار هوشمند
+          </button>
         </div>
-        <p className="whitespace-pre-line text-sm leading-6 text-indigo-100">{aiSummary}</p>
-        <button
-          onClick={() => setPage('assistant')}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/15 py-2.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/25"
-        >
-          <Zap className="h-3.5 w-3.5" />
-          گفتگو با دستیار هوشمند
-        </button>
       </motion.section>
 
       {/* Today tasks */}
@@ -257,21 +285,24 @@ export function Dashboard() {
       >
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-            <ListTodo className="h-4 w-4 text-teal-600" />
+            <ListTodo className="h-4 w-4 text-accent-600" />
             کارهای امروز
           </h3>
           <button
             onClick={() => setPage('tasks')}
-            className="flex items-center gap-1 text-sm text-sky-600 hover:text-sky-700 font-medium"
+            className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             همه کارها
             <ArrowLeft className="h-4 w-4" />
           </button>
         </div>
         {todayTasks.length === 0 ? (
-          <p className="rounded-2xl bg-white/60 p-4 text-center text-sm text-slate-400">
-            کاری برای امروز ثبت نشده
-          </p>
+          <div className="card-base rounded-2xl p-6 text-center">
+            <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+            <p className="text-sm text-slate-400">
+              کاری برای امروز ثبت نشده
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
             {todayTasks.map((task) => (

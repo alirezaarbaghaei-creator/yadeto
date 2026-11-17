@@ -79,7 +79,7 @@ export function PricingPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setPage('home')}
-          className="flex h-10 w-10 items-center justify-center rounded-xl glass text-slate-600 hover:text-slate-900 shadow-glass"
+          className="flex h-10 w-10 items-center justify-center rounded-xl card-base text-slate-600 hover:text-slate-900"
         >
           <ArrowRight className="h-5 w-5" />
         </button>
@@ -93,11 +93,11 @@ export function PricingPage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-2xl p-5 shadow-glass"
+        className="card-base rounded-2xl p-5 shadow-card"
       >
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-lg shadow-indigo-500/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 text-white shadow-lg shadow-primary-700/20">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
@@ -116,15 +116,15 @@ export function PricingPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl bg-cyan-50 px-4 py-2">
-              <Zap className="h-4 w-4 text-cyan-500" />
-              <span className="text-sm font-bold text-cyan-700">
+            <div className="flex items-center gap-2 rounded-xl bg-accent-50 px-4 py-2">
+              <Zap className="h-4 w-4 text-cyan-600" />
+              <span className="text-sm font-bold text-accent-700">
                 {(aiLimit - aiAssistantUsage).toLocaleString('fa-IR')} / {aiLimit.toLocaleString('fa-IR')} هوش
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-2">
-              <Gift className="h-4 w-4 text-indigo-500" />
-              <span className="text-sm font-bold text-indigo-700">
+            <div className="flex items-center gap-2 rounded-xl bg-primary-50 px-4 py-2">
+              <Gift className="h-4 w-4 text-primary-600" />
+              <span className="text-sm font-bold text-primary-700">
                 {(templateLimit - templateUsage).toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')} ثبت کار و رویداد
               </span>
             </div>
@@ -138,7 +138,7 @@ export function PricingPage() {
           <button
             onClick={handleRestore}
             disabled={restoring}
-            className="flex items-center gap-2 rounded-xl glass px-4 py-2.5 text-sm font-medium text-slate-700 hover:text-slate-900 shadow-glass disabled:opacity-50 transition-all"
+            className="flex items-center gap-2 rounded-xl card-base px-4 py-2.5 text-sm font-medium text-slate-700 hover:text-slate-900 disabled:opacity-50 transition-all"
           >
             {restoring ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -206,12 +206,12 @@ function PlanCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08 }}
-      className={`glass rounded-3xl p-6 shadow-glass hover:shadow-glass-lg transition-all relative flex flex-col ${
-        plan.popular ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''
+      className={`card-base rounded-3xl p-6 shadow-card hover:shadow-card-hover transition-all relative flex flex-col ${
+        plan.popular ? 'ring-2 ring-primary-400 scale-[1.02]' : ''
       }`}
     >
       {plan.popular && (
-        <div className="absolute -top-3 right-6 flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-700 text-white px-3 py-1 text-[10px] font-bold shadow-lg">
+        <div className="absolute -top-3 right-6 flex items-center gap-1 rounded-full bg-gradient-to-r from-primary-700 to-primary-900 text-white px-3 py-1 text-[10px] font-bold shadow-lg">
           <Sparkles className="h-3 w-3" />
           پیشنهاد ویژه
         </div>
@@ -237,13 +237,13 @@ function PlanCard({
 
       <div className="flex items-center gap-4 mb-5">
         <div className="flex items-center gap-1.5">
-          <Zap className="h-3.5 w-3.5 text-cyan-500" />
+          <Zap className="h-3.5 w-3.5 text-cyan-600" />
           <span className="text-xs text-slate-600">
             {plan.aiAssistantLimit.toLocaleString('fa-IR')} دستیار
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Gift className="h-3.5 w-3.5 text-indigo-500" />
+          <Gift className="h-3.5 w-3.5 text-primary-600" />
           <span className="text-xs text-slate-600">
             {plan.templateLimit.toLocaleString('fa-IR')} ثبت خودکار
           </span>
@@ -319,7 +319,7 @@ function FeatureComparison({ currentPlan }: { currentPlan: PlanId }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="glass rounded-2xl p-5 shadow-glass overflow-x-auto"
+      className="card-base rounded-2xl p-5 shadow-card overflow-x-auto"
     >
       <h3 className="text-base font-bold text-slate-900 mb-4">مقایسه امکانات</h3>
       <table className="w-full text-sm">
@@ -332,12 +332,12 @@ function FeatureComparison({ currentPlan }: { currentPlan: PlanId }) {
                 <th
                   key={id}
                   className={`text-center py-3 px-2 font-bold ${
-                    currentPlan === id ? 'text-indigo-600' : 'text-slate-700'
+                    currentPlan === id ? 'text-primary-600' : 'text-slate-700'
                   }`}
                 >
                   {plan.name}
                   {currentPlan === id && (
-                    <span className="block text-[10px] font-medium text-indigo-400 mt-0.5">طرح شما</span>
+                    <span className="block text-[10px] font-medium text-primary-400 mt-0.5">طرح شما</span>
                   )}
                 </th>
               );

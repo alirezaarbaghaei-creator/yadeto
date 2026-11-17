@@ -32,7 +32,7 @@ export function MiniCalendar({ view, selected, onSelect, onNavigate, hasItems, i
   const today = getTodayJalali();
 
   return (
-    <div className="glass rounded-3xl p-4 shadow-glass">
+    <div className="card-base rounded-3xl p-4 shadow-card">
       {/* Month header */}
       <div className="mb-3 flex items-center justify-between">
         <button
@@ -87,9 +87,9 @@ export function MiniCalendar({ view, selected, onSelect, onNavigate, hasItems, i
                   onClick={() => onSelect(day)}
                   className={`relative flex h-9 items-center justify-center rounded-xl text-sm font-medium transition-all ${
                     isSelected
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                      ? 'bg-primary-700 text-white shadow-lg shadow-primary-700/30'
                       : isToday
-                        ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200'
+                        ? 'bg-primary-50 text-primary-600 ring-1 ring-primary-200'
                         : holiday
                           ? 'bg-red-50 text-red-500 hover:bg-red-100'
                           : isFriday(day)
@@ -101,7 +101,7 @@ export function MiniCalendar({ view, selected, onSelect, onNavigate, hasItems, i
                   {marker && (
                     <span
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isSelected ? 'bg-white' : holiday ? 'bg-red-500' : 'bg-teal-500'
+                        isSelected ? 'bg-white' : holiday ? 'bg-red-500' : 'bg-accent-500'
                       }`}
                     />
                   )}

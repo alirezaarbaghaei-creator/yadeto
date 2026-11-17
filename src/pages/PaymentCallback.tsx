@@ -118,11 +118,11 @@ export function PaymentCallback({ onDone }: PaymentCallbackProps) {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="glass rounded-3xl p-8 shadow-glass-lg max-w-sm w-full text-center"
+        className="card-base rounded-3xl p-8 shadow-card max-w-sm w-full text-center"
       >
         {state === 'loading' && (
           <>
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500 mx-auto mb-5" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary-500 mx-auto mb-5" />
             <h1 className="text-lg font-bold text-slate-900 mb-1">در حال تأیید پرداخت...</h1>
             <p className="text-sm text-slate-500">لطفاً صبر کنید</p>
           </>

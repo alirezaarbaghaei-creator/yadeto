@@ -103,11 +103,11 @@ export function PaymentResult({ onDone }: PaymentResultProps) {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="glass rounded-3xl p-8 shadow-glass-lg max-w-sm w-full text-center"
+        className="card-base rounded-3xl p-8 shadow-card max-w-sm w-full text-center"
       >
         {state === 'loading' && (
           <>
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-500 mx-auto mb-5" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary-500 mx-auto mb-5" />
             <h1 className="text-lg font-bold text-slate-900 mb-1">در حال بررسی وضعیت پرداخت...</h1>
             <p className="text-sm text-slate-500">لطفاً صبر کنید</p>
           </>
@@ -140,7 +140,7 @@ export function PaymentResult({ onDone }: PaymentResultProps) {
             <h1 className="text-xl font-bold text-slate-900 mb-2">پرداخت با موفقیت انجام شد</h1>
             {planId && (
               <p className="text-sm text-slate-600 mb-1 flex items-center justify-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-indigo-500" />
+                <Sparkles className="h-4 w-4 text-primary-600" />
                 طرح {planId === 'pro' ? 'حرفه‌ای' : planId === 'basic' ? 'پایه' : planId} با موفقیت فعال شد
               </p>
             )}

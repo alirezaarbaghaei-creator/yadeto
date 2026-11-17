@@ -44,9 +44,9 @@ export function HomePage() {
   );
 
   const stats = [
-    { label: 'کارهای امروز', value: String(todayTasks.length), icon: ListTodo, cls: 'bg-indigo-50 text-indigo-600' },
-    { label: 'رویدادهای امروز', value: String(todayEvents.length), icon: CalendarDays, cls: 'bg-sky-50 text-sky-600' },
-    { label: 'زمان آزاد', value: formatFreeTime(schedule.freeMinutes), icon: Coffee, cls: 'bg-teal-50 text-teal-600' },
+    { label: 'کارهای امروز', value: String(todayTasks.length), icon: ListTodo, cls: 'bg-primary-50 text-primary-600' },
+    { label: 'رویدادهای امروز', value: String(todayEvents.length), icon: CalendarDays, cls: 'bg-accent-50 text-accent-600' },
+    { label: 'زمان آزاد', value: formatFreeTime(schedule.freeMinutes), icon: Coffee, cls: 'bg-cyan-50 text-cyan-600' },
   ];
 
   return (
@@ -64,7 +64,7 @@ export function HomePage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="glass grid grid-cols-3 gap-2 rounded-3xl p-4"
+        className="card-base grid grid-cols-3 gap-2 rounded-3xl p-4"
       >
         {stats.map((s) => {
           const Icon = s.icon;
@@ -87,7 +87,7 @@ export function HomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         onClick={() => setModalOpen(true)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 py-3 text-right text-sm text-slate-400 transition-colors hover:border-indigo-400 hover:text-indigo-500"
+        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 py-3 text-right text-sm text-slate-400 transition-colors hover:border-primary-400 hover:text-primary-600"
       >
         <Plus className="h-4 w-4" />
         کار جدید ثبت کن...
@@ -99,11 +99,11 @@ export function HomePage() {
         transition={{ delay: 0.15 }}
       >
         <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-700">
-          <Clock className="h-4 w-4 text-indigo-500" />
+          <Clock className="h-4 w-4 text-primary-600" />
           برنامه امروز
         </h3>
         {schedule.items.length === 0 ? (
-          <div className="glass rounded-2xl p-6 text-center">
+          <div className="card-base rounded-2xl p-6 text-center">
             <Calendar className="mx-auto mb-2 h-8 w-8 text-slate-300" />
             <p className="text-sm text-slate-400">امروز برنامه‌ای ثبت نشده — روزت خالیه!</p>
           </div>
@@ -115,7 +115,7 @@ export function HomePage() {
                   {toFaDigits(item.time)}
                 </span>
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                <div className="glass flex-1 rounded-xl px-3 py-2.5">
+                <div className="card-base flex-1 rounded-xl px-3 py-2.5">
                   <p className="truncate text-right text-sm text-slate-700">{item.title}</p>
                 </div>
               </div>
@@ -128,14 +128,14 @@ export function HomePage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-3xl bg-gradient-to-br from-indigo-600 to-teal-700 p-5 text-white shadow-lg shadow-indigo-500/20"
+        className="rounded-3xl bg-gradient-to-br from-primary-800 to-accent-800 p-5 text-white shadow-lg shadow-primary-700/20"
       >
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
           <Sparkles className="h-4 w-4" />
           خلاصه هوشمند امروز
         </div>
-        <p className="whitespace-pre-line text-sm leading-6 text-indigo-100">{aiSummary}</p>
-        <p className="mt-3 text-xs text-indigo-200">
+        <p className="whitespace-pre-line text-sm leading-6 text-primary-100">{aiSummary}</p>
+        <p className="mt-3 text-xs text-primary-200">
           {schedule.freeMinutes > 120
             ? 'امروز زمان خوبی داری؛ یکی از کارهای عقب‌افتاده‌ات رو انجام بده.'
             : 'امروز برنامه‌ات پُره؛ مراقب وقت استراحتت باش.'}
@@ -148,7 +148,7 @@ export function HomePage() {
         transition={{ delay: 0.25 }}
       >
         <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-700">
-          <ListTodo className="h-4 w-4 text-teal-600" />
+          <ListTodo className="h-4 w-4 text-accent-600" />
           کارهای امروز
         </h3>
         {todayTasks.length === 0 ? (

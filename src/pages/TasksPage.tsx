@@ -57,10 +57,10 @@ export function TasksPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">کارها</h2>
+        <h2 className="text-2xl font-bold text-slate-900">کارها</h2>
         <button
           onClick={() => { setEditingTask(null); setModalOpen(true); }}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 transition-colors hover:bg-indigo-700"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-700 text-white shadow-lg shadow-primary-700/25 transition-colors hover:bg-primary-800"
           aria-label="افزودن کار"
         >
           <Plus className="h-5 w-5" />
@@ -68,14 +68,14 @@ export function TasksPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-2xl bg-slate-100/80 p-1">
+      <div className="flex gap-1 rounded-2xl bg-surface-2 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-white text-indigo-600 shadow-sm'
+                ? 'bg-white text-primary-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -83,7 +83,7 @@ export function TasksPage() {
             {tab.count > 0 && (
               <span
                 className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] ${
-                  activeTab === tab.key ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
+                  activeTab === tab.key ? 'bg-primary-700 text-white' : 'bg-slate-200 text-slate-500'
                 }`}
               >
                 {toFaDigits(tab.count)}
@@ -101,7 +101,7 @@ export function TasksPage() {
         className="space-y-2"
       >
         {filteredTasks.length === 0 ? (
-          <div className="glass rounded-2xl p-8 text-center">
+          <div className="card-base rounded-2xl p-8 text-center">
             <CheckSquare className="mx-auto mb-3 h-10 w-10 text-slate-300" />
             <p className="text-sm font-medium text-slate-500">
               {activeTab === 'today'
