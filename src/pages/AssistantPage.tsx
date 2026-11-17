@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Sparkles, Check, X, CalendarClock, MapPin, Trash2, CalendarDays } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Sparkles, Check, X, CalendarClock, MapPin, Mic, Brain, Zap } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { usePlanStore } from '@/store/planStore';
 import { useAuthStore } from '@/store/authStore';
@@ -17,10 +17,8 @@ import {
   parseJalali,
   toGregorian,
   gregorianToISO,
-  addJalaliDays,
   getStartOfWeek,
   getEndOfWeek,
-  isoDateToJalali,
 } from '@/utils/jalaliDate';
 
 interface ChatMessage {
@@ -66,34 +64,8 @@ function intentDateToISO(dateStr: string): string | null {
   return gregorianToISO(toGregorian(parsed.year, parsed.month, parsed.day));
 }
 
-function formatDayList(
-  j: { year: number; month: number; day: number },
-  tasks: import('@/types/calendar').Task[],
-  events: import('@/types/calendar').CalendarEvent[],
-  label: string,
-): string {
-  const iso = gregorianToISO(toGregorian(j.year, j.month, j.day));
-  const dayEvents = [...events.filter((e) => e.date === iso)].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const dayTasks = [...getVisibleTasksForDate(tasks, iso).filter((t) => t.status !== 'completed')]
-    .sort((a, b) => (a.dueTime ?? '99:99').localeCompare(b.dueTime ?? '99:99'));
-  let text = `برنامه ${label} (${formatJalali(j, 'long')}):
-
-`;
-  if (dayEvents.length === 0 && dayTasks.length === 0) {
-    text += 'هیچ برنامه‌ای ثبت نشده — روزت خالیه! 🎉';
-    return text.trim();
-  }
-  const items: { time: string; text: string }[] = [];
-  for (const e of dayEvents) items.push({ time: e.startTime, text: `رویداد: ${e.title}${e.location ? ` (${e.location})` : ''}` });
-  for (const t of dayTasks) items.push({ time: t.dueTime ?? '—', text: `کار: ${t.title}` });
-  items.sort((a, b) => a.time.localeCompare(b.time));
-  for (const it of items) text += `• ${toFaDigits(it.time)} — ${it.text}
-`;
-  return text.trim();
-}
-
 function buildGreeting(): string {
-  return `سلام! من «یادتو» هستم — مدیر برنامه شخصی تو 👋
+  return `سلام! من «یادتو» هستم — مدیر برنامه شخصی تو
 
 این کارها رو برات انجام می‌دم:
 • ثبت کار و رویداد فقط با یک جمله («فردا ساعت ۱۰ جلسه دارم» یا «یادم بنداز پنجشنبه قبض رو بپردازم»)
@@ -118,7 +90,6 @@ export function AssistantPage() {
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
   const updateTask = useCalendarStore((s) => s.updateTask);
-  const updatePreferences = useCalendarStore((s) => s.updatePreferences);
   const user = useAuthStore((s) => s.user);
   const canUseAiAssistant = usePlanStore((s) => s.canUseAiAssistant);
   const incrementAiAssistant = usePlanStore((s) => s.incrementAiAssistant);
@@ -147,24 +118,20 @@ export function AssistantPage() {
     });
   }, []);
 
-
-
   const clearActions = useCallback(() => {
     setMessages((prev) => prev.map((m) => (m.actions?.length ? { ...m, actions: [] } : m)));
   }, []);
 
-  /** Executes a confirmed intent (from LLM or local parser) */
   const handleConfirm = useCallback(
     async (intentData: Record<string, unknown>) => {
       const action = intentData.action as string;
 
-      // ── سهمیه ثبت کار/رویداد ──
       if (action === 'create_task' || action === 'create_recurring_task' || action === 'create_event') {
         if (!canUseTemplate()) {
           openUpgradeModal('no-template-credits');
           pushMessage({
             role: 'assistant',
-            content: '🔒 سهمیه ثبت کار و رویداد این ماهت تمام شده. با ارتقای طرح می‌تونی نامحدود ثبت کنی.',
+            content: 'سهمیه ثبت کار و رویداد امروزت تمام شده. با ارتقای طرح می‌تونی نامحدود ثبت کنی.',
           });
           return;
         }
@@ -209,7 +176,7 @@ export function AssistantPage() {
           return;
         }
         const time = (intentData.time as string) || '10:00';
-        const event = addEvent({ title, date: iso, startTime: time, color: '#3157D5', category: 'work' });
+        const event = addEvent({ title, date: iso, startTime: time, color: '#4338ca', category: 'work' });
         if (event) {
           await scheduleTaskReminder(event.title, event.date, event.startTime, preferences?.defaultReminder ?? 15);
         }
@@ -275,8 +242,6 @@ export function AssistantPage() {
     [addTask, addEvent, toggleTask, deleteTask, deleteEvent, updateTask, tasks, events, preferences, pushMessage, canUseTemplate, incrementTemplate, openUpgradeModal, user],
   );
 
-
-  /** Handles intents that don't need confirmation (summaries, free time…) */
   const handleInfoIntent = useCallback(
     (intent: AIIntent): string | null => {
       switch (intent.action) {
@@ -299,7 +264,7 @@ export function AssistantPage() {
           const dayEvents = events.filter((e) => e.date === todayISO);
           let text = `برنامه امروز (${formatJalali(getTodayJalali(), 'long')}):\n\n`;
           if (dayEvents.length === 0 && dayTasks.length === 0) {
-            text += 'امروز برنامه‌ای نداری. روزت خالیه! 🎉';
+            text += 'امروز برنامه‌ای نداری. روزت خالیه!';
           } else {
             for (const e of dayEvents) text += `• رویداد: ${e.title} — ساعت ${toFaDigits(e.startTime)}\n`;
             for (const t of dayTasks)
@@ -349,35 +314,28 @@ export function AssistantPage() {
     [events, tasks, holidays, preferences, toggleTask],
   );
 
-  /**
-   * Offline notice — the assistant answers only through the server LLM.
-   * When the AI service is unreachable there is no local fallback reply.
-   */
   const offlineMessage: Omit<ChatMessage, 'id'> = {
     role: 'assistant',
     content:
-      '⚠️ دستیار در حال حاضر آفلاین است و نمی‌توانم پاسخ بدهم.\n\n' +
+      'دستیار در حال حاضر آفلاین است و نمی‌توانم پاسخ بدهم.\n\n' +
       'برای فعال‌سازی دستیار، مدیر سیستم باید از «پنل مدیریت ← هوش مصنوعی» سرویس را تنظیم کند.\n' +
       'ثبت دستی کارها و رویدادها از تب‌های «کارها» و «تقویم» همچنان در دسترس است.',
   };
-
 
   const processUserInput = useCallback(
     async (text: string) => {
       setThinking(true);
 
-      // ── سهمیه پیام دستیار: قبل از هر فراخوانی AI ──
       if (!canUseAiAssistant()) {
         setThinking(false);
         openUpgradeModal('no-ai-credits');
         pushMessage({
           role: 'assistant',
-          content: '🔒 سهمیه پیام‌های دستیار این ماهت تمام شده. برای ادامه، طرحت رو ارتقا بده — از پنجره‌ای که باز شد می‌تونی انتخاب کنی.',
+          content: 'سهمیه پیام‌های دستیار امروزت تمام شده. برای ادامه، طرحت رو ارتقا بده — از پنجره‌ای که باز شد می‌تونی انتخاب کنی.',
         });
         return;
       }
 
-      // Plain-text confirm/cancel against the last action message
       const isConfirmText = /^(بله|آره|ثبت کن|تأیید|باشه|درسته|انجام بده)\s*[!؟.]?$/i.test(text.trim());
       const isCancelText = /^(نه|لغو|بی‌خیال|کنسل|انصراف|نمی‌خوام)\s*[!؟.]?$/i.test(text.trim());
       if (isConfirmText || isCancelText) {
@@ -409,7 +367,6 @@ export function AssistantPage() {
         },
       });
 
-      // Offline / unreachable AI: no local fallback reply, per product decision.
       if (!llmResponse) {
         setThinking(false);
         pushMessage(offlineMessage);
@@ -422,12 +379,10 @@ export function AssistantPage() {
         return;
       }
 
-      // یک پیام از سهمیه دستیار کسر شد (پاسخ موفق)
       void incrementAiAssistant(user?.id ?? 'local');
 
       const intent = llmResponse.intent as AIIntent | null;
 
-      // Clarify flow — ask the user for the missing detail
       if (llmResponse.clarify && llmResponse.clarify.partialIntent) {
         setThinking(false);
         pushMessage({
@@ -486,7 +441,6 @@ export function AssistantPage() {
     [clearActions, handleConfirm, pushMessage],
   );
 
-
   const quickPrompts = [
     'برنامه امروزم چیه؟',
     'فردا ساعت ۱۰ جلسه دارم',
@@ -497,13 +451,20 @@ export function AssistantPage() {
 
   return (
     <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 text-white">
-          <Sparkles className="h-4 w-4" />
+      {/* Assistant header with identity */}
+      <div className="mb-3 flex items-center gap-3">
+        <div className="relative">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 text-white shadow-lg shadow-primary-900/20">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="absolute -bottom-0.5 -left-0.5 h-3.5 w-3.5 rounded-full bg-accent-400 border-2 border-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-slate-800">دستیار هوشمند</h2>
-          <p className="text-[11px] text-slate-400">کار، رویداد و برنامه‌ریزی با جمله ساده</p>
+          <h2 className="text-lg font-bold text-slate-900">یادتو</h2>
+          <p className="text-[11px] text-accent-600 font-medium flex items-center gap-1">
+            <Brain className="h-3 w-3" />
+            دستیار هوشمند شخصی
+          </p>
         </div>
       </div>
 
@@ -511,11 +472,16 @@ export function AssistantPage() {
       <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-1 py-2">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+            {m.role === 'assistant' && (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-950 text-white ml-2 mt-1 self-end">
+                <Sparkles className="h-4 w-4" />
+              </div>
+            )}
             <div
-              className={`max-w-[85%] space-y-2 rounded-2xl px-4 py-2.5 text-sm leading-6 ${
+              className={`max-w-[80%] space-y-2 rounded-2xl px-4 py-2.5 text-sm leading-6 ${
                 m.role === 'user'
-                  ? 'rounded-bl-md bg-indigo-600 text-white'
-                  : 'glass rounded-br-md text-slate-700'
+                  ? 'rounded-bl-md bg-primary-700 text-white'
+                  : 'card-base rounded-br-md text-slate-700'
               }`}
             >
               <p className="whitespace-pre-line text-right">{m.content}</p>
@@ -529,7 +495,7 @@ export function AssistantPage() {
                         pushMessage({ role: 'user', content: qr });
                         void processUserInput(qr);
                       }}
-                      className="rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-100"
+                      className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs text-primary-700 hover:bg-primary-100 transition-colors"
                     >
                       {qr}
                     </button>
@@ -541,14 +507,14 @@ export function AssistantPage() {
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     onClick={() => void handleActionClick('confirm', m)}
-                    className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-600"
+                    className="flex items-center gap-1 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-600 transition-colors"
                   >
                     <Check className="h-3.5 w-3.5" />
                     {m.actions.find((a) => a.type === 'confirm')?.label ?? 'تایید'}
                   </button>
                   <button
                     onClick={() => void handleActionClick('cancel', m)}
-                    className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50"
+                    className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
                     {m.actions.find((a) => a.type === 'cancel')?.label ?? 'لغو'}
@@ -561,10 +527,13 @@ export function AssistantPage() {
 
         {thinking && (
           <div className="flex justify-end">
-            <div className="glass flex items-center gap-2 rounded-2xl rounded-br-md px-4 py-3">
-              <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400" />
-              <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400 [animation-delay:0.15s]" />
-              <span className="h-2 w-2 animate-bounce rounded-full bg-indigo-400 [animation-delay:0.3s]" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-950 text-white ml-2 self-end">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div className="card-base flex items-center gap-2 rounded-2xl rounded-br-md px-4 py-3">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary-400" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary-400 [animation-delay:0.15s]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary-400 [animation-delay:0.3s]" />
             </div>
           </div>
         )}
@@ -580,8 +549,9 @@ export function AssistantPage() {
                 pushMessage({ role: 'user', content: q });
                 void processUserInput(q);
               }}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
             >
+              <Zap className="h-3 w-3 text-accent-500" />
               {q}
             </button>
           ))}
@@ -589,7 +559,7 @@ export function AssistantPage() {
       )}
 
       {/* Input */}
-      <div className="glass flex items-center gap-2 rounded-2xl p-2">
+      <div className="card-base flex items-center gap-2 rounded-2xl p-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -605,14 +575,14 @@ export function AssistantPage() {
         <button
           onClick={handleSend}
           disabled={!input.trim() || thinking}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-700 text-white transition-colors hover:bg-primary-800 disabled:opacity-40"
           aria-label="ارسال"
         >
           <Send className="h-4 w-4 -scale-x-100" />
         </button>
       </div>
 
-      <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-slate-400">
+      <p className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
         <MapPin className="h-3 w-3" />
         همگام‌سازی امن با حساب کاربری شما
         <CalendarClock className="h-3 w-3" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, Phone, Loader2, AlertCircle, Sparkles, KeyRound, ArrowRight, Lock, Eye, EyeOff, User, FileText, Bell, X } from 'lucide-react';
+import { Sparkles, Phone, Loader2, AlertCircle, KeyRound, ArrowRight, Lock, Eye, EyeOff, User, FileText, Bell, X } from 'lucide-react';
 import * as api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { ensureSmsAutofillPlugin, getSmsAutofillPluginSync } from '@/services/smsAutofillPlugin';
@@ -10,9 +10,7 @@ type Step = 'phone' | 'otp' | 'register';
 type Mode = 'otp' | 'password';
 
 interface AuthPageProps {
-  /** when true, the header copy explains login is only needed for the assistant */
   assistantOnly?: boolean;
-  /** called after a successful login (used to route back to the assistant) */
   onAuthed?: () => void;
 }
 
@@ -32,58 +30,12 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-  /**
-   * Mirror of isExistingUser for the SMS listener.
-   *
-   * The listener is registered once when the OTP step opens, which is BEFORE
-   * otpSend() has answered whether this phone number is known. State captured
-   * then would keep the stale initial `false` forever and every autofill would
-   * be treated as a new user (code filled in, never submitted). A ref lets the
-   * same listener always read the current answer without being torn down and
-   * rebuilt — see the autofill effect for why re-running it is unsafe.
-   */
   const isExistingUserRef = useRef(false);
   isExistingUserRef.current = isExistingUser;
-
-  /**
-   * Set when the user taps "send code" without notification access yet.
-   *
-   * The tap opens Settings and returns without sending; when the user comes back
-   * and the resume probe finds access granted, this flag tells the probe to send
-   * the OTP for them. A ref because it is read inside the resume effect, which is
-   * mounted once and must not re-subscribe just to see a boolean change.
-   */
   const pendingSendRef = useRef(false);
-
-  /**
-   * Latest phone number, mirrored for handlers that outlive their render.
-   *
-   * The resume effect is mounted once ([] deps) and must not re-subscribe to see
-   * a new phone, but doSendOtp needs the current value. A ref gives the same
-   * "always current" guarantee the autofill handler uses for isExistingUser,
-   * without tearing the listener down and rebuilding it.
-   */
   const phoneRef = useRef('');
   phoneRef.current = phone;
-
-  /**
-   * Whether the user has granted notification access, probed on the phone step.
-   *
-   * State, not a ref, because the OTP screen renders a different block depending
-   * on it and that block must disappear the moment access is granted: the user
-   * leaves for Settings, flips the toggle, and comes back, so this has to re-probe
-   * on resume and re-render without them reloading anything.
-   */
   const [accessGranted, setAccessGranted] = useState(false);
-
-  /**
-   * Whether the "grant notification access?" confirm dialog is open.
-   *
-   * Shown instead of jumping straight to Settings when the user taps "send
-   * code" without access: "yes" opens Settings (the resume probe then sends
-   * the code if they return with access granted), "no" sends the code right
-   * away.
-   */
   const [showAccessDialog, setShowAccessDialog] = useState(false);
 
   useEffect(() => {
@@ -92,20 +44,8 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
     return () => clearInterval(t);
   }, [timer]);
 
-  /**
-   * Checks notification access once when the phone step opens.
-   *
-   * Notification access is a Settings toggle rather than a runtime permission, so
-   * there is no dialog to pre-empt and nothing to ask for here — this only reads
-   * state. The first login shows a hint on the OTP screen with a button that calls
-   * openSettings(); every login after that finds enabled=true and shows nothing.
-   *
-   * Fire-and-forget: no plugin (browser) or a failed probe leaves it false, which
-   * just means manual code entry — autofill must never be able to block a login.
-   */
   useEffect(() => {
     if (step !== 'phone') return;
-
     void (async () => {
       const ok = await ensureSmsAutofillPlugin();
       if (!ok) return;
@@ -120,18 +60,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
     })();
   }, [step]);
 
-  /**
-   * Re-probes when the app comes back to the foreground.
-   *
-   * Needed because granting access happens OUTSIDE the app: the user taps the
-   * button, lands in Settings, flips the toggle, and returns. Without this the OTP
-   * screen would keep showing "enable autofill" with access already granted, and
-   * the hint would only clear on the next login.
-   *
-   * visibilitychange rather than Capacitor's appStateChange, to avoid pulling in a
-   * second plugin for one boolean; it fires on resume in the Android WebView, which
-   * is the only case that matters here.
-   */
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
@@ -142,10 +70,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
           const res = await plugin.isEnabled();
           const granted = !!(res && res.enabled);
           setAccessGranted(granted);
-          // The user came back from the Settings page this tap opened. If they
-          // granted access, complete the send they originally asked for; the
-          // message goes out now that the listener is in place to catch it.
-          // Cleared first so a spurious second resume can't double-send.
           if (granted && pendingSendRef.current) {
             pendingSendRef.current = false;
             setError('');
@@ -160,85 +84,38 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  /**
-   * SMS autofill — active ONLY while the OTP step is on screen.
-   *
-   * Why the effect keys on [step] alone: the native plugin is a singleton
-   * listener, so starting it once for the whole page would leave it reading
-   * notifications during the phone, register and password steps too. Re-keying on
-   * step makes "enter OTP step -> arm -> leave -> disarm" exact, and the plugin
-   * drops every code that arrives while disarmed.
-   *
-   * Unlike the old RECEIVE_SMS version there is no registration race at all: the
-   * system binds OtpNotificationListener for as long as notification access is
-   * granted, so there is no window in which the code can arrive before anything is
-   * listening. That was the entire reason autofill looked broken on device.
-   *
-   * isExistingUser is deliberately NOT a dependency, even though the handler
-   * needs it. React batches the setIsExistingUser()/setStep() pair from
-   * otpSend() into one commit, so today there would be no intermediate render —
-   * but if that ever changed, the extra commit would run cleanup and the effect
-   * body concurrently, and a stop() landing after the next start() would leave the
-   * plugin disarmed and autofill silently dead. Reading the flag from a ref keeps
-   * the handler current without re-running the effect, so there is exactly one
-   * arm/disarm per OTP step and no ordering hazard.
-   *
-   * Everything is best-effort: no plugin (browser), access not granted, or a
-   * failed start all resolve to plain manual entry with no error shown, because
-   * autofill is a convenience and must never block a login.
-   */
   useEffect(() => {
     if (step !== 'otp') return;
-
     let handle: { remove: () => void } | null = null;
     let cancelled = false;
-
     const run = async () => {
       const ok = await ensureSmsAutofillPlugin();
       if (!ok || cancelled) return;
-
       const plugin = getSmsAutofillPluginSync();
       if (!plugin) return;
-
-      // addListener() must be awaited BEFORE start(): a code can arrive between
-      // the two calls, and a listener armed ahead of its JS handler would read
-      // the code and drop it on the floor.
       handle = await plugin.addListener('code', (data: SmsCodeEvent) => {
         if (!data || typeof data.code !== 'string') return;
         setCode(data.code);
-        // Auto-submit only for a returning user. A new user still has to enter a
-        // name and password, so their code is only filled in and the form waits.
         if (isExistingUserRef.current) {
           void runVerifyOtp(data.code);
         }
       });
-
       if (cancelled) {
         await handle.remove();
         return;
       }
       await plugin.start();
     };
-
     void run();
-
     return () => {
       cancelled = true;
       void handle?.remove();
       const plugin = getSmsAutofillPluginSync();
       if (plugin) void plugin.stop();
     };
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  /**
-   * The actual OTP request, extracted so the resume probe can replay it.
-   *
-   * handleSendOtp owns the access check; this owns the network call and the step
-   * transition. Splitting them lets the resume effect call the same send after
-   * the user grants access in Settings, without duplicating the call.
-   */
   const doSendOtp = async () => {
     setLoading(true);
     try {
@@ -253,21 +130,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
     }
   };
 
-  /**
-   * Sends the OTP. Before it fires, notification access is confirmed so the code
-   * can be read automatically the moment the SMS lands.
-   *
-   * WHY HERE AND NOT ON THE OTP SCREEN: the previous flow sent the SMS first and
-   * only then showed an "enable autofill" hint. That is too late in practice —
-   * the message arrives within seconds and the notification is already posted
-   * (and passed over) by the time the user finds the toggle. Asking up front, on
-   * the same tap that sends the code, removes that whole class of miss.
-   *
-   * The ask is a confirm dialog, not a blind jump: confirming opens Settings
-   * (the pending send fires on return with access granted); declining sends
-   * the code right away and manual entry keeps working. Autofill never gates
-   * the login.
-   */
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -275,16 +137,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
       setError('شماره موبایل نامعتبر است. مثال: 09123456789');
       return;
     }
-
-    // First tap on this device (no access yet): open Settings and stop. The SMS
-    // is deliberately NOT sent here — the whole point is to have access in place
-    // before the message exists. Returning from Settings re-probes and, if
-    // granted, sends the OTP for them automatically.
-    //
-    // The check re-probes rather than trusting `accessGranted` state: that state
-    // can still be its initial false for a moment while the phone-step probe
-    // resolves, and a returning user who already granted access must not be sent
-    // back to Settings on every login. isEnabled() is the authoritative source.
     let granted = accessGranted;
     const plugin = getSmsAutofillPluginSync();
     if (!granted && plugin) {
@@ -297,18 +149,12 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
       }
     }
     if (!granted) {
-      // No access yet: ASK FIRST via the confirm dialog. Confirming marks
-      // the send pending and opens Settings (the resume probe then sends
-      // the code when they return with access granted); declining sends
-      // the code right away. Never jump to Settings without asking.
       setShowAccessDialog(true);
       return;
     }
-
     await doSendOtp();
   };
 
-  /** Runs when the user confirms the access dialog: mark pending, open Settings. */
   async function confirmOpenAccessSettings() {
     setShowAccessDialog(false);
     const plugin = getSmsAutofillPluginSync();
@@ -322,35 +168,21 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
     }
   }
 
-  /** Runs when the user declines the access dialog: send the code right away. */
   function declineAccessAndSend() {
     setShowAccessDialog(false);
     void doSendOtp();
   }
 
-  /**
-   * Single verification path for BOTH the submit button and SMS autofill.
-   * Taking the code as an argument is what lets autofill reuse it: the 'code'
-   * event arrives asynchronously, long after the closure over `code` state was
-   * created, so reading `code` from state there would always verify a stale
-   * (usually still empty) value.
-   *
-   * Autofill only auto-submits for a returning user. A new user still has to
-   * enter a name and password first, so their code is only filled in and the
-   * form is left waiting for the tap.
-   */
   const runVerifyOtp = async (value: string) => {
     setError('');
     if (value.length !== 6) {
       setError('کد تایید باید ۶ رقم باشد');
       return;
     }
-    // If new user, go to registration step to collect name + password
     if (!isExistingUser) {
       setStep('register');
       return;
     }
-    // Existing user: verify and log in directly
     setLoading(true);
     try {
       const res = await api.otpVerify(phone, value);
@@ -436,9 +268,9 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-surface">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-200/30 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 h-96 w-96 rounded-full bg-cyan-200/20 blur-3xl" />
-        <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-sky-100/40 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />
+        <div className="absolute top-1/2 -left-40 h-96 w-96 rounded-full bg-accent-200/20 blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 h-80 w-80 rounded-full bg-primary-100/30 blur-3xl" />
       </div>
 
       <motion.div
@@ -447,23 +279,24 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-full max-w-md"
       >
-        <div className="glass rounded-3xl p-8 shadow-2xl">
+        <div className="card-premium rounded-3xl p-8">
+          {/* Brand identity */}
           <div className="flex flex-col items-center mb-8">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 shadow-lg shadow-sky-500/30 mb-4">
-              <CalendarDays className="h-8 w-8 text-white" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 shadow-lg shadow-primary-900/25 mb-4">
+              <Sparkles className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">تقویم هوشمند</h1>
+            <h1 className="text-2xl font-bold text-slate-900">یادتو</h1>
             <p className="text-sm text-slate-500 mt-1">
-              {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'مدیریت زمان و کارها'}
+              {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'همراه هوشمند زندگی تو'}
             </p>
           </div>
 
           {/* Mode tabs */}
-          <div className="flex gap-2 p-1 rounded-xl bg-slate-100/80 mb-6">
+          <div className="flex gap-2 p-1 rounded-xl bg-slate-100 mb-6">
             <button
               onClick={() => { setMode('otp'); setStep('phone'); setError(''); }}
               className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
-                mode === 'otp' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                mode === 'otp' ? 'bg-white text-primary-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               <Phone className="h-4 w-4" />
@@ -472,7 +305,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
             <button
               onClick={() => { setMode('password'); setStep('phone'); setError(''); }}
               className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all ${
-                mode === 'password' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                mode === 'password' ? 'bg-white text-primary-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               <Lock className="h-4 w-4" />
@@ -481,7 +314,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* ─── OTP MODE: PHONE STEP ─── */}
             {mode === 'otp' && step === 'phone' && (
               <motion.div key="otp-phone" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h2 className="text-lg font-semibold text-slate-800 mb-2">ورود / ثبت‌نام</h2>
@@ -495,20 +327,19 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                         type="tel" value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
                         placeholder="09123456789" required dir="ltr"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
                       />
                     </div>
                   </div>
                   {error && <ErrorBox text={error} />}
                   <button type="submit" disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25 disabled:opacity-50">
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ارسال کد تایید'}
                   </button>
                 </form>
               </motion.div>
             )}
 
-            {/* ─── OTP MODE: OTP VERIFY STEP ─── */}
             {mode === 'otp' && step === 'otp' && (
               <motion.div key="otp-verify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <button onClick={() => setStep('phone')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 mb-4">
@@ -524,62 +355,46 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       <input type="text" inputMode="numeric" value={code}
                         onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="------" required dir="ltr" autoComplete="one-time-code"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-4 text-lg font-mono tracking-[0.5em] text-slate-900 placeholder:text-slate-300 focus-ring text-center"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-4 text-lg font-mono tracking-[0.5em] text-slate-900 placeholder:text-slate-300 focus-ring text-center"
                       />
                     </div>
-                    {/* Two different messages depending on whether the user has
-                        already enabled notification access. The probe runs on the
-                        phone step, before the SMS was sent, so on every login
-                        after the first it is already true and this whole block is
-                        replaced by the quiet one-liner. */}
                     {!accessGranted && (
                       <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-2.5">
                         <p className="text-[11px] leading-relaxed text-amber-800 mb-2">
-                          برای خواندن خودکار کد، دسترسی «اعلان‌ها» را برای تقویم هوشمند فعال کنید.
+                          برای خواندن خودکار کد، دسترسی «اعلان‌ها» را برای یادتو فعال کنید.
                           هیچ مجوز پیامکی درخواست نمی‌شود.
                         </p>
                         <button type="button"
                           onClick={async () => {
                             const plugin = getSmsAutofillPluginSync();
                             if (!plugin) return;
-                            try {
-                              await plugin.openSettings();
-                            } catch (err) {
-                              console.warn('[sms-autofill] openSettings failed', err);
-                            }
+                            try { await plugin.openSettings(); } catch (err) { console.warn('[sms-autofill] openSettings failed', err); }
                           }}
                           className="text-[11px] font-medium text-amber-700 underline">
                           فعال‌سازی خواندن خودکار
                         </button>
                       </div>
                     )}
-                    {/* Covers the paths the listener cannot: a browser, a device
-                        where the messaging app does not post the SMS as a
-                        notification, or a ROM that hides notification bodies.
-                        Kept subtle — the field above is the same one autofill
-                        writes into, so a user who saw it fill itself in never
-                        reads this line. */}
                     <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
                       کد به‌صورت خودکار خوانده می‌شود؛ در غیر این صورت می‌توانید از پیامک کپی کنید.
                     </p>
                   </div>
                   {error && <ErrorBox text={error} />}
                   <button type="submit" disabled={loading || code.length !== 6}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25 disabled:opacity-50">
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (isExistingUser ? 'تایید و ورود' : 'ادامه')}
                   </button>
                   <div className="flex items-center justify-between text-xs">
                     {timer > 0 ? (
                       <span className="text-slate-400">ارسال مجدد در {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}</span>
                     ) : (
-                      <button onClick={handleResend} className="text-sky-600 hover:text-sky-700 font-medium">ارسال مجدد کد</button>
+                      <button onClick={handleResend} className="text-primary-600 hover:text-primary-700 font-medium">ارسال مجدد کد</button>
                     )}
                   </div>
                 </form>
               </motion.div>
             )}
 
-            {/* ─── OTP MODE: REGISTER STEP (new users only) ─── */}
             {mode === 'otp' && step === 'register' && (
               <motion.div key="otp-register" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <button onClick={() => setStep('otp')} className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 mb-4">
@@ -594,7 +409,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       <User className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
                         placeholder="مثلاً: علی محمدی" required dir="rtl"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring"
                       />
                     </div>
                   </div>
@@ -604,7 +419,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       <Lock className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••" required dir="ltr"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
                       />
                       <button type="button" onClick={() => setShowPassword((v) => !v)}
                         aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}
@@ -620,34 +435,33 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       type="checkbox"
                       checked={acceptedTerms}
                       onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 shrink-0"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 shrink-0"
                     />
                     <span className="text-xs text-slate-600 leading-relaxed">
                       قوانین استفاده از اپلیکیشن را خوانده و می‌پذیرم.{' '}
                       <button
                         type="button"
                         onClick={() => setShowTerms(true)}
-                        className="text-sky-600 hover:text-sky-700 font-medium underline"
+                        className="text-primary-600 hover:text-primary-700 font-medium underline"
                       >
                         مشاهده قوانین
                       </button>
                     </span>
                   </label>
                   <button type="submit" disabled={loading || !acceptedTerms}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25 disabled:opacity-50 disabled:cursor-not-allowed">
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ثبت‌نام و ورود'}
                   </button>
                 </form>
               </motion.div>
             )}
 
-            {/* ─── TERMS MODAL ─── */}
             {showTerms && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
                 onClick={() => setShowTerms(false)}
               >
                 <motion.div
@@ -655,15 +469,15 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.92, y: 20 }}
                   transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                  className="glass rounded-3xl p-6 shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+                  className="bg-white rounded-3xl p-6 shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-sky-500" />
+                      <FileText className="h-5 w-5 text-primary-500" />
                       قوانین استفاده از اپلیکیشن
                     </h3>
-                    <button onClick={() => setShowTerms(false)} className="flex h-9 w-9 items-center justify-center rounded-xl glass text-slate-500 hover:text-slate-900 transition-colors">
+                    <button onClick={() => setShowTerms(false)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
                       <X className="h-5 w-5" />
                     </button>
                   </div>
@@ -682,7 +496,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       setAcceptedTerms(true);
                       setShowTerms(false);
                     }}
-                    className="mt-4 w-full rounded-xl bg-sky-600 text-white py-2.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30"
+                    className="mt-4 w-full rounded-xl bg-primary-700 text-white py-2.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25"
                   >
                     می‌پذیرم
                   </button>
@@ -690,7 +504,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
               </motion.div>
             )}
 
-            {/* ─── PASSWORD MODE ─── */}
             {mode === 'password' && (
               <motion.div key="password" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                 <h2 className="text-lg font-semibold text-slate-800 mb-2">ورود با رمز عبور</h2>
@@ -703,7 +516,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       <input type="tel" value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
                         placeholder="09123456789" required dir="ltr"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
                       />
                     </div>
                   </div>
@@ -714,7 +527,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                       <input type={showPassword ? 'text' : 'password'} value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••" required dir="ltr"
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 py-3 pr-11 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-11 text-sm text-slate-900 placeholder:text-slate-400 focus-ring text-left"
                       />
                       <button type="button" onClick={() => setShowPassword((v) => !v)}
                         aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}
@@ -726,7 +539,7 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                   </div>
                   {error && <ErrorBox text={error} />}
                   <button type="submit" disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3.5 text-sm font-semibold hover:bg-sky-700 transition-colors shadow-lg shadow-sky-500/30 disabled:opacity-50">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3.5 text-sm font-semibold hover:bg-primary-800 transition-colors shadow-lg shadow-primary-700/25 disabled:opacity-50">
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ورود'}
                   </button>
                 </form>
@@ -734,58 +547,56 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
             )}
           </AnimatePresence>
 
-
-          <div className="mt-6 flex items-center gap-2 rounded-xl bg-amber-50/60 border border-amber-100 px-4 py-3">
-            <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-            <p className="text-xs text-amber-700">با ثبت‌نام، طرح آزمایشی رایگان دریافت کنید و بلافاصله برنامه‌ریزی را شروع کنید.</p>
+          <div className="mt-6 flex items-center gap-2 rounded-xl bg-accent-50 border border-accent-100 px-4 py-3">
+            <Sparkles className="h-4 w-4 text-accent-600 shrink-0" />
+            <p className="text-xs text-accent-700">با ثبت‌نام، طرح رایگان دریافت کنید و بلافاصله برنامه‌ریزی را شروع کنید.</p>
           </div>
         </div>
       </motion.div>
 
-      {/* Access-confirm dialog: mounted at page root so `fixed` tracks the viewport. */}
-          <AnimatePresence>
-            {showAccessDialog && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-                onClick={() => setShowAccessDialog(false)}
-              >
-                <motion.div
-                  initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                  dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title"
-                  onClick={(e) => e.stopPropagation()}
-                  className="mx-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50">
-                      <Bell className="h-5 w-5 text-sky-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 id="access-dialog-title" className="text-sm font-bold text-slate-800">تکمیل خودکار کد تأیید</h3>
-                      <p className="mt-1 text-xs leading-6 text-slate-500">
-                        می‌خواهی تقویم هوشمند به اعلان‌ها دسترسی داشته باشد تا پیامک حاوی کد را بخواند و آن را خودکار وارد کند؟ اگر نخواهی، کد را مثل همیشه خودت وارد می‌کنی.
-                      </p>
-                    </div>
-                    <button type="button" onClick={() => setShowAccessDialog(false)} aria-label="بستن"
-                      className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <button type="button" onClick={confirmOpenAccessSettings}
-                      className="w-full rounded-xl bg-sky-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700">
-                      بله، باز کردن تنظیمات
-                    </button>
-                    <button type="button" onClick={declineAccessAndSend}
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                      نه، همین حالا کد را بفرست
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      <AnimatePresence>
+        {showAccessDialog && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            onClick={() => setShowAccessDialog(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title"
+              onClick={(e) => e.stopPropagation()}
+              className="mx-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
+                  <Bell className="h-5 w-5 text-primary-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 id="access-dialog-title" className="text-sm font-bold text-slate-800">تکمیل خودکار کد تأیید</h3>
+                  <p className="mt-1 text-xs leading-6 text-slate-500">
+                    می‌خواهی یادتو به اعلان‌ها دسترسی داشته باشد تا پیامک حاوی کد را بخواند و آن را خودکار وارد کند؟ اگر نخواهی، کد را مثل همیشه خودت وارد می‌کنی.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setShowAccessDialog(false)} aria-label="بستن"
+                  className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-4 space-y-2">
+                <button type="button" onClick={confirmOpenAccessSettings}
+                  className="w-full rounded-xl bg-primary-700 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-800">
+                  بله، باز کردن تنظیمات
+                </button>
+                <button type="button" onClick={declineAccessAndSend}
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                  نه، همین حالا کد را بفرست
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

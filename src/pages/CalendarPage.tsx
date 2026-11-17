@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, PartyPopper } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, PartyPopper, ChevronRight } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { MiniCalendar, toISO } from '@/components/calendar/MiniCalendar';
 import { getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
@@ -68,7 +68,9 @@ export function CalendarPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-slate-800">تقویم</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-900">تقویم</h2>
+      </div>
 
       <MiniCalendar
         view={view}
@@ -96,17 +98,17 @@ export function CalendarPage() {
       />
 
       {/* Selected day header */}
-      <div className="glass rounded-2xl p-4">
+      <div className="card-base rounded-2xl p-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <p className="text-sm font-bold text-slate-700">{formatJalali(selected, 'long')}</p>
+            <p className="text-sm font-bold text-slate-900">{formatJalali(selected, 'long')}</p>
             <p className="text-[11px] text-slate-400" dir="ltr" style={{ textAlign: 'right' }}>
               {selectedGregorian} • {selectedHijri}
             </p>
           </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md shadow-indigo-500/30 hover:bg-indigo-700"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-700 text-white shadow-md shadow-primary-700/25 hover:bg-primary-800 transition-colors"
             aria-label="افزودن کار در این روز"
           >
             <Plus className="h-4 w-4" />
@@ -131,12 +133,19 @@ export function CalendarPage() {
         className="space-y-2"
       >
         {dayEvents.length === 0 && dayTasks.length === 0 ? (
-          <div className="rounded-2xl bg-white/60 p-6 text-center">
+          <div className="card-base rounded-2xl p-8 text-center">
             <CalendarIcon className="mx-auto mb-2 h-8 w-8 text-slate-300" />
-            <p className="text-sm text-slate-400">برای این روز رویداد یا کاری ثبت نشده</p>
+            <p className="text-sm font-medium text-slate-500">برای این روز رویداد یا کاری ثبت نشده</p>
+            <p className="mt-1 text-xs text-slate-400">با دکمه + کار یا رویداد اضافه کن</p>
           </div>
         ) : (
           <>
+            {dayEvents.length > 0 && (
+              <div className="mb-1 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-cyan-500" />
+                <p className="text-[11px] font-semibold text-slate-500">رویدادها</p>
+              </div>
+            )}
             {dayEvents.map((event) => (
               <EventCard
                 key={event.id}
@@ -145,6 +154,12 @@ export function CalendarPage() {
                 onEdit={(e) => { setEditingEvent(e); setEventModalOpen(true); }}
               />
             ))}
+            {dayTasks.length > 0 && (
+              <div className="mb-1 mt-3 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary-500" />
+                <p className="text-[11px] font-semibold text-slate-500">کارها</p>
+              </div>
+            )}
             {dayTasks.map((task) => (
               <TaskCard
                 key={task.id}
