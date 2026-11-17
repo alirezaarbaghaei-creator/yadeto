@@ -71,7 +71,7 @@ export function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
       </div>
     );
   }
@@ -148,7 +148,7 @@ export function AdminPage() {
 // ─── Stats Tab ─────────────────────────────────────────────────
 function StatsTab({ stats }: { stats: AdminStats | null }) {
   const cards = [
-    { label: 'کاربران', value: stats?.users ?? 0, icon: Users, color: 'from-sky-500 to-sky-600', bg: 'bg-sky-50', text: 'text-sky-600' },
+    { label: 'کاربران', value: stats?.users ?? 0, icon: Users, color: 'from-primary-600 to-primary-800', bg: 'bg-primary-50', text: 'text-primary-700' },
     { label: 'کارها', value: stats?.tasks ?? 0, icon: ListTodo, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600' },
     { label: 'رویدادها', value: stats?.events ?? 0, icon: CalendarDays, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600' },
   ];
@@ -158,7 +158,7 @@ function StatsTab({ stats }: { stats: AdminStats | null }) {
       {cards.map((c) => {
         const Icon = c.icon;
         return (
-          <div key={c.label} className="glass rounded-2xl p-5">
+          <div key={c.label} className="card-base rounded-2xl p-5">
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.bg} mb-3`}>
               <Icon className={`h-5 w-5 ${c.text}`} />
             </div>
@@ -311,7 +311,7 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
           خروجی اکسل
         </button>
         <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 rounded-xl bg-sky-600 text-white px-4 py-2.5 text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm">
+          className="flex items-center gap-2 rounded-xl bg-primary-700 text-white px-4 py-2.5 text-sm font-medium hover:bg-primary-800 transition-colors shadow-sm">
           <Plus className="h-4 w-4" />
           کاربر جدید
         </button>
@@ -319,7 +319,7 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
 
       {error && <ErrorBox text={error} />}
 
-      <div className="glass rounded-2xl overflow-hidden">
+      <div className="card-base rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -339,7 +339,7 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
                   <td className="px-4 py-3 text-slate-600" dir="ltr">{u.phone}</td>
                   <td className="px-4 py-3">
                     {u.is_admin ? (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-sky-50 text-sky-600 px-2 py-1 text-xs font-medium">
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-primary-50 text-primary-700 px-2 py-1 text-xs font-medium">
                         <Shield className="h-3 w-3" /> مدیر
                       </span>
                     ) : (
@@ -349,8 +349,8 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
                   <td className="px-4 py-3">
                     <button onClick={() => setSubEdit(u)}
                       className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
-                        u.plan_type === 'pro' ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' :
-                        u.plan_type === 'basic' ? 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100' :
+                        u.plan_type === 'pro' ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' :
+                        u.plan_type === 'basic' ? 'bg-accent-50 text-accent-700 hover:bg-accent-100' :
                         'bg-slate-100 text-slate-500 hover:bg-slate-200'
                       }`}>
                       {u.plan_type === 'pro' && <Crown className="h-3 w-3" />}
@@ -365,11 +365,11 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={() => setEditing(u)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-colors">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-primary-700 hover:bg-primary-50 transition-colors">
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button onClick={() => setSubEdit(u)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-primary-700 hover:bg-primary-50 transition-colors">
                         <Crown className="h-4 w-4" />
                       </button>
                       <button onClick={() => handleDelete(u.id)}
@@ -415,12 +415,12 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
               </Field>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={newAdmin} onChange={(e) => setNewAdmin(e.target.checked)}
-                  className="h-4 w-4 rounded text-sky-600 focus:ring-sky-500" />
+                  className="h-4 w-4 rounded text-primary-700 focus:ring-primary-500" />
                 <span className="text-sm text-slate-700">دسترسی مدیر</span>
               </label>
               {error && <ErrorBox text={error} />}
               <button type="submit" disabled={saving}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3 text-sm font-semibold hover:bg-sky-700 transition-colors disabled:opacity-50">
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-4 w-4" />}
                 ساخت کاربر
               </button>
@@ -495,14 +495,14 @@ function EditUserModal({
         </Field>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)}
-            className="h-4 w-4 rounded text-sky-600 focus:ring-sky-500" />
+            className="h-4 w-4 rounded text-primary-700 focus:ring-primary-500" />
           <span className="text-sm text-slate-700 flex items-center gap-1">
-            <Shield className="h-4 w-4 text-sky-500" /> دسترسی مدیر
+            <Shield className="h-4 w-4 text-primary-500" /> دسترسی مدیر
           </span>
         </label>
         {error && <ErrorBox text={error} />}
         <button type="submit" disabled={saving}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 text-white py-3 text-sm font-semibold hover:bg-sky-700 transition-colors disabled:opacity-50">
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-4 w-4" />}
           ذخیره تغییرات
         </button>
@@ -534,7 +534,7 @@ function SubEditModal({ user, onClose, onSaved }: { user: AdminUserRow; onClose:
     <Modal onClose={onClose} title={`مدیریت اشتراک — ${user.full_name || user.phone}`}>
       <form onSubmit={handleSave} className="space-y-4">
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-          <Crown className="h-5 w-5 text-indigo-500" />
+          <Crown className="h-5 w-5 text-primary-600" />
           <div className="flex-1">
             <p className="text-xs text-slate-500">طرح فعلی</p>
             <p className="text-sm font-bold text-slate-700">
@@ -551,8 +551,8 @@ function SubEditModal({ user, onClose, onSaved }: { user: AdminUserRow; onClose:
               onClick={() => setPlanId(plan.id)}
               className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 transition-all text-right ${
                 planId === plan.id
-                  ? plan.id === 'pro' ? 'border-indigo-400 bg-indigo-50/50'
-                    : plan.id === 'basic' ? 'border-cyan-400 bg-cyan-50/50'
+                  ? plan.id === 'pro' ? 'border-primary-400 bg-primary-50/50'
+                    : plan.id === 'basic' ? 'border-accent-400 bg-accent-50/50'
                     : 'border-slate-300 bg-slate-50'
                   : 'border-slate-100 hover:border-slate-200'
               }`}
@@ -566,7 +566,7 @@ function SubEditModal({ user, onClose, onSaved }: { user: AdminUserRow; onClose:
                   {plan.aiAssistantLimit.toLocaleString('fa-IR')} هوش + {plan.templateLimit.toLocaleString('fa-IR')} قالب
                 </p>
               </div>
-              {planId === plan.id && <CheckCircle2 className="h-5 w-5 text-indigo-500" />}
+              {planId === plan.id && <CheckCircle2 className="h-5 w-5 text-primary-600" />}
             </button>
           ))}
         </div>
@@ -578,7 +578,7 @@ function SubEditModal({ user, onClose, onSaved }: { user: AdminUserRow; onClose:
 
         {error && <ErrorBox text={error} />}
         <button type="submit" disabled={saving}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white py-3 text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-700 text-white py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Crown className="h-4 w-4" />}
           ذخیره طرح
         </button>
@@ -604,14 +604,14 @@ function SubsTab() {
   }, []);
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary-500" /></div>;
   }
 
   const planIcons: Record<PlanId, typeof Gift> = { free: Gift, basic: Zap, pro: Crown };
 
   return (
     <div className="space-y-3">
-      <div className="glass rounded-2xl overflow-hidden">
+      <div className="card-base rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -686,7 +686,7 @@ function TransactionsTab() {
   }, []);
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-sky-500" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary-500" /></div>;
   }
 
   const totalRevenue = txs
@@ -696,30 +696,30 @@ function TransactionsTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="glass rounded-2xl p-4">
+        <div className="card-base rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
             <Receipt className="h-4 w-4 text-emerald-500" />
             <span className="text-xs text-slate-500">درآمد کل</span>
           </div>
           <p className="text-lg font-bold text-slate-900">{formatToman(totalRevenue)} ت</p>
         </div>
-        <div className="glass rounded-2xl p-4">
+        <div className="card-base rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             <span className="text-xs text-slate-500">پرداخت‌های موفق</span>
           </div>
           <p className="text-lg font-bold text-slate-900">{txs.filter((t) => t.status === 'paid').length.toLocaleString('fa-IR')}</p>
         </div>
-        <div className="glass rounded-2xl p-4">
+        <div className="card-base rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
-            <CreditCard className="h-4 w-4 text-sky-500" />
+            <CreditCard className="h-4 w-4 text-primary-500" />
             <span className="text-xs text-slate-500">کل تراکنش‌ها</span>
           </div>
           <p className="text-lg font-bold text-slate-900">{txs.length.toLocaleString('fa-IR')}</p>
         </div>
       </div>
 
-      <div className="glass rounded-2xl overflow-hidden">
+      <div className="card-base rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -842,16 +842,16 @@ function PaymentsTab({ settings, onSave }: { settings: AdminSettings; onSave: ()
             placeholder="Bazaar OAuth Refresh Token"
             className="w-full bg-transparent py-3 pr-11 pl-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none text-left font-mono" />
         </Field>
-        <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3">
-          <AlertCircle className="h-4 w-4 text-sky-500 shrink-0" />
-          <p className="text-xs text-sky-700">
+        <div className="flex items-center gap-2 rounded-xl bg-primary-50 border border-primary-100 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-primary-500 shrink-0" />
+          <p className="text-xs text-primary-700">
             این اطلاعات از پنل توسعه‌دهندگان کافه‌بازار دریافت می‌شود و فقط در سرور ذخیره می‌شود.
           </p>
         </div>
       </SettingsCard>
 
       <button type="submit" disabled={saving}
-        className="flex items-center gap-2 rounded-xl bg-sky-600 text-white px-6 py-3 text-sm font-semibold hover:bg-sky-700 transition-colors disabled:opacity-50">
+        className="flex items-center gap-2 rounded-xl bg-primary-700 text-white px-6 py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
         {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-4 w-4" />}
         ذخیره تنظیمات
       </button>
@@ -900,7 +900,7 @@ function SmsTab({ settings, onSave }: { settings: AdminSettings; onSave: () => P
         </Field>
       </SettingsCard>
       <button type="submit" disabled={saving}
-        className="flex items-center gap-2 rounded-xl bg-sky-600 text-white px-6 py-3 text-sm font-semibold hover:bg-sky-700 transition-colors disabled:opacity-50">
+        className="flex items-center gap-2 rounded-xl bg-primary-700 text-white px-6 py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
         {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-4 w-4" />}
         ذخیره تنظیمات
       </button>
@@ -971,7 +971,7 @@ function AiTab({ settings, onSave }: { settings: AdminSettings; onSave: () => Pr
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={saving}
-          className="flex items-center gap-2 rounded-xl bg-sky-600 text-white px-6 py-3 text-sm font-semibold hover:bg-sky-700 transition-colors disabled:opacity-50">
+          className="flex items-center gap-2 rounded-xl bg-primary-700 text-white px-6 py-3 text-sm font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-4 w-4" />}
           ذخیره تنظیمات
         </button>
@@ -1016,12 +1016,12 @@ function Modal({ children, onClose, title }: { children: React.ReactNode; onClos
       onClick={onClose}>
       <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        className="glass rounded-3xl p-6 shadow-2xl max-w-md w-full"
+        className="card-base rounded-3xl p-6 shadow-card-lg max-w-md w-full"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
           <button onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl glass text-slate-500 hover:text-slate-900 transition-colors">
+            className="flex h-9 w-9 items-center justify-center rounded-xl card-base text-slate-500 hover:text-slate-900 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -1035,7 +1035,7 @@ function Field({ label, icon: Icon, children }: { label: string; icon: typeof Ph
   return (
     <div>
       <label className="block text-xs font-medium text-slate-600 mb-1.5">{label}</label>
-      <div className="relative flex items-center rounded-xl border border-slate-200 bg-white/80 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all">
+      <div className="relative flex items-center rounded-xl border border-slate-200 bg-white/80 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
         <Icon className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         {children}
       </div>
@@ -1045,7 +1045,7 @@ function Field({ label, icon: Icon, children }: { label: string; icon: typeof Ph
 
 function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="glass rounded-2xl p-5 space-y-4">
+    <div className="card-base rounded-2xl p-5 space-y-4">
       <h3 className="text-sm font-bold text-slate-800">{title}</h3>
       {children}
     </div>
@@ -1138,7 +1138,7 @@ function DatabaseTab() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm"
+              className="flex items-center gap-2 rounded-xl bg-primary-700 text-white px-5 py-2.5 text-sm font-medium hover:bg-primary-800 transition-colors shadow-sm"
             >
               <Save className="h-4 w-4" />
               ذخیره آدرس
