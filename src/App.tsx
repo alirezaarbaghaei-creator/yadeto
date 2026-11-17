@@ -15,6 +15,7 @@ import { PaymentCallback } from '@/pages/PaymentCallback';
 import { PaymentResult } from '@/pages/PaymentResult';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { UpgradeModal } from '@/components/UpgradeModal';
+import { QuickAddModal } from '@/components/QuickAddModal';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCalendarStore } from '@/store/calendarStore';
@@ -188,7 +189,7 @@ function AppShell() {
       <MobileHeader />
 
       <main className="relative lg:mr-64">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 pb-28 lg:pb-10">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 pb-32 lg:pb-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}
@@ -204,6 +205,7 @@ function AppShell() {
       </main>
 
       <BottomNav />
+      <QuickAddModal />
       <UpgradeModal />
     </div>
   );

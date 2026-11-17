@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Loader2,
   Sparkles,
+  Plus,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -536,39 +537,57 @@ export function Sidebar() {
 export function BottomNav() {
   const currentPage = useAppStore((s) => s.currentPage);
   const setPage = useAppStore((s) => s.setPage);
+  const openQuickAdd = useAppStore((s) => s.openQuickAdd);
   const navItems = useNavItems();
+
+  const leftItems = navItems.slice(0, 2);
+  const rightItems = navItems.slice(2);
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = currentPage === item.id;
+    return (
+      <button
+        key={item.id}
+        onClick={() => setPage(item.id)}
+        className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl transition-colors"
+      >
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+            active
+              ? 'bg-primary-700 text-white shadow-lg shadow-primary-700/25 scale-105'
+              : 'text-slate-400'
+          }`}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <span
+          className={`text-[10px] font-medium ${
+            active ? 'text-primary-700' : 'text-slate-400'
+          }`}
+        >
+          {item.label}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/85 backdrop-blur-xl border-t border-slate-200/50">
-      <div className="flex items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = currentPage === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setPage(item.id)}
-              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors"
-            >
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
-                  active
-                    ? 'bg-primary-700 text-white shadow-lg shadow-primary-700/25 scale-105'
-                    : 'text-slate-400'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-              <span
-                className={`text-[10px] font-medium ${
-                  active ? 'text-primary-700' : 'text-slate-400'
-                }`}
-              >
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+      <div className="relative flex items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        {leftItems.map(renderNavItem)}
+
+        {/* Center FAB */}
+        <button
+          onClick={() => openQuickAdd('picker')}
+          className="relative -mt-8 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-primary-900 text-white shadow-xl shadow-primary-900/30 transition-all active:scale-95 hover:scale-105"
+          aria-label="افزودن کار یا رویداد"
+        >
+          <Plus className="h-7 w-7" strokeWidth={2.5} />
+          <span className="absolute inset-0 rounded-full ring-4 ring-white/85" />
+        </button>
+
+        {rightItems.map(renderNavItem)}
       </div>
     </nav>
   );

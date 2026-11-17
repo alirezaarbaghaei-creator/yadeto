@@ -86,11 +86,11 @@ export function HomePage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        onClick={() => setModalOpen(true)}
+        onClick={() => useAppStore.getState().openQuickAdd('picker')}
         className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 py-3 text-right text-sm text-slate-400 transition-colors hover:border-primary-400 hover:text-primary-600"
       >
         <Plus className="h-4 w-4" />
-        کار جدید ثبت کن...
+        کار یا رویداد جدید ثبت کن...
       </motion.button>
 
       <motion.section
