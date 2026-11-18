@@ -10,6 +10,7 @@ public class YadetoBootReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             YadetoStatusHelper.showOrCancelOngoingNotification(context);
             YadetoStatusHelper.updateAllWidgets(context);
+            YadetoStatusHelper.rescheduleAllPersistedAlarms(context);
         }
     }
 }

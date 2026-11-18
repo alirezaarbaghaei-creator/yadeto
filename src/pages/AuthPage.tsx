@@ -284,11 +284,16 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
           <div className="flex flex-col items-center mb-8">
             <img
               src="/logo.png"
-              alt="Yadeto"
+              alt="یادتو"
               className="h-20 w-20 rounded-3xl object-cover shadow-xl shadow-primary-900/15 border border-primary-100 bg-white mb-4"
             />
-            <h1 className="text-2xl font-extrabold text-slate-900">Yadeto</h1>
-            <p className="text-sm text-primary-600 font-medium mt-1">
+            <h1
+              className="text-3xl font-black tracking-tight bg-gradient-to-l from-primary-700 via-primary-600 to-accent-500 bg-clip-text text-transparent"
+              style={{ fontFamily: "'Estedad', 'Sahel', 'Vazirmatn', sans-serif" }}
+            >
+              یادتو
+            </h1>
+            <p className="text-sm text-slate-500 font-medium mt-1.5">
               {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'تقویم و مدیر برنامه هوشمند'}
             </p>
           </div>

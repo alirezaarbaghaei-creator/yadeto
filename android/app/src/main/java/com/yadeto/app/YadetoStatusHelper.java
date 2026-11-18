@@ -10,12 +10,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
+
+import org.json.JSONObject;
+
+import java.util.Map;
 
 public final class YadetoStatusHelper {
 
     public static final String PREFS_NAME = "yadeto_status";
+    public static final String ALARMS_PREFS = "yadeto_alarms";
     public static final String KEY_DATE = "dateLabel";
     public static final String KEY_SUMMARY = "summaryLine";
     public static final String KEY_DETAILS = "detailsText";
@@ -66,9 +72,12 @@ public final class YadetoStatusHelper {
             nm.createNotificationChannel(channel);
         }
 
-        String dateLabel = prefs.getString(KEY_DATE, "Yadeto");
+        String dateLabel = prefs.getString(KEY_DATE, "تقویم یادتو");
         String summaryLine = prefs.getString(KEY_SUMMARY, "برنامه امروز آماده است");
         String detailsText = prefs.getString(KEY_DETAILS, "");
+        String safeDetails = (detailsText != null && !detailsText.trim().isEmpty())
+            ? detailsText
+            : "امروز برنامه‌ای ثبت نشده — برای ثبت کار یا رویداد ضربه بزنید";
 
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -79,15 +88,23 @@ public final class YadetoStatusHelper {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        String bigText = detailsText != null && !detailsText.trim().isEmpty()
-            ? summaryLine + "\n" + detailsText
-            : summaryLine;
+        RemoteViews compactView = new RemoteViews(context.getPackageName(), R.layout.notification_status);
+        compactView.setTextViewText(R.id.notif_date, dateLabel);
+        compactView.setTextViewText(R.id.notif_summary, summaryLine);
+
+        RemoteViews expandedView = new RemoteViews(context.getPackageName(), R.layout.notification_status_expanded);
+        expandedView.setTextViewText(R.id.notif_exp_date, dateLabel);
+        expandedView.setTextViewText(R.id.notif_exp_summary, summaryLine);
+        expandedView.setTextViewText(R.id.notif_exp_details, safeDetails);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
+            .setColor(0xFF6D28D9)
             .setContentTitle(dateLabel)
             .setContentText(summaryLine)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(bigText))
+            .setCustomContentView(compactView)
+            .setCustomBigContentView(expandedView)
+            .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -139,6 +156,21 @@ public final class YadetoStatusHelper {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
 
+        // Persist alarm so it survives device reboot
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("alarmId", alarmId);
+            obj.put("title", title);
+            obj.put("body", body);
+            obj.put("triggerAtMillis", triggerAtMillis);
+            obj.put("soundId", soundId);
+            obj.put("vibrate", vibrate);
+            context.getSharedPreferences(ALARMS_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(String.valueOf(alarmId), obj.toString())
+                .apply();
+        } catch (Exception ignored) {}
+
         Intent intent = new Intent(context, YadetoAlarmReceiver.class);
         intent.putExtra("alarmId", alarmId);
         intent.putExtra("title", title);
@@ -153,24 +185,58 @@ public final class YadetoStatusHelper {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        Intent openIntent = new Intent(context, MainActivity.class);
+        PendingIntent showIntent = PendingIntent.getActivity(
+            context,
+            alarmId + 50000,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (am.canScheduleExactAlarms()) {
-                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
-                } else {
-                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
-            } else {
-                am.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
-            }
+            // setAlarmClock is never deferred by Doze mode and works reliably even when app is closed
+            AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent);
+            am.setAlarmClock(clockInfo, pi);
         } catch (SecurityException ignored) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            } else {
+                am.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            }
+        }
+    }
+
+    public static void rescheduleAllPersistedAlarms(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(ALARMS_PREFS, Context.MODE_PRIVATE);
+        Map<String, ?> all = prefs.getAll();
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, ?> entry : all.entrySet()) {
+            try {
+                JSONObject obj = new JSONObject(String.valueOf(entry.getValue()));
+                long triggerAt = obj.getLong("triggerAtMillis");
+                if (triggerAt <= now) {
+                    prefs.edit().remove(entry.getKey()).apply();
+                    continue;
+                }
+                scheduleExactAlarm(
+                    context,
+                    obj.getInt("alarmId"),
+                    obj.optString("title", "آلارم یادتو"),
+                    obj.optString("body", ""),
+                    triggerAt,
+                    obj.optString("soundId", "classic"),
+                    obj.optBoolean("vibrate", true)
+                );
+            } catch (Exception ignored) {}
         }
     }
 
     public static void cancelScheduledAlarm(Context context, int alarmId) {
+        context.getSharedPreferences(ALARMS_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(String.valueOf(alarmId))
+            .apply();
+
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         Intent intent = new Intent(context, YadetoAlarmReceiver.class);
