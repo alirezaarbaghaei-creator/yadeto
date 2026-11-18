@@ -1,6 +1,6 @@
 {
-	"appId": "com.kateb.app",
-	"appName": "Kateb",
+	"appId": "com.yadeto.app",
+	"appName": "یادتو",
 	"webDir": "dist",
 	"android": {
 		"allowMixedContent": false,

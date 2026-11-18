@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Kateb JSON API — single-entry PHP backend
+ * YADETO JSON API — single-entry PHP backend
  *
  * Upload this entire `php-api/` folder to your hosting (e.g. inside public_html/api/).
  * The frontend talks to this file via POST with a JSON body: { "action": "...", ...params }
@@ -106,7 +106,7 @@ function now_iso(): string {
 function init_tables(): void {
     $pdo = db();
     $ddl = [
-        "CREATE TABLE IF NOT EXISTS kateb_users (
+        "CREATE TABLE IF NOT EXISTS YADETO_users (
             id CHAR(36) PRIMARY KEY,
             phone VARCHAR(20) UNIQUE NOT NULL,
             full_name TEXT DEFAULT '',
@@ -120,7 +120,7 @@ function init_tables(): void {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
-        "CREATE TABLE IF NOT EXISTS kateb_otp_codes (
+        "CREATE TABLE IF NOT EXISTS YADETO_otp_codes (
             id CHAR(36) PRIMARY KEY,
             phone VARCHAR(20) NOT NULL,
             code VARCHAR(6) NOT NULL,
@@ -130,7 +130,7 @@ function init_tables(): void {
             INDEX idx_otp_phone (phone)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
-        "CREATE TABLE IF NOT EXISTS kateb_sessions (
+        "CREATE TABLE IF NOT EXISTS YADETO_sessions (
             token VARCHAR(64) PRIMARY KEY,
             user_id CHAR(36) NOT NULL,
             phone VARCHAR(20) NOT NULL,
@@ -139,7 +139,7 @@ function init_tables(): void {
             INDEX idx_sessions_user (user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
-        "CREATE TABLE IF NOT EXISTS kateb_settings (
+        "CREATE TABLE IF NOT EXISTS YADETO_settings (
             id INT PRIMARY KEY DEFAULT 1,
             sms_api_key TEXT DEFAULT '',
             sms_pattern_code TEXT DEFAULT '',
@@ -250,8 +250,8 @@ function init_tables(): void {
         $pdo->exec($sql);
     }
 
-    // Add plan/usage columns to existing kateb_users table if missing
-    $cols = $pdo->query("SHOW COLUMNS FROM kateb_users")->fetchAll(PDO::FETCH_COLUMN);
+    // Add plan/usage columns to existing YADETO_users table if missing
+    $cols = $pdo->query("SHOW COLUMNS FROM YADETO_users")->fetchAll(PDO::FETCH_COLUMN);
     $addCols = [
         'plan_type' => "ADD COLUMN plan_type VARCHAR(20) DEFAULT 'free'",
         'ai_assistant_usage_this_month' => 'ADD COLUMN ai_assistant_usage_this_month INT DEFAULT 0',
@@ -261,7 +261,7 @@ function init_tables(): void {
     ];
     foreach ($addCols as $col => $sql) {
         if (!in_array($col, $cols)) {
-            $pdo->exec("ALTER TABLE kateb_users $sql");
+            $pdo->exec("ALTER TABLE YADETO_users $sql");
         }
     }
 
@@ -292,8 +292,8 @@ function init_tables(): void {
         try { $pdo->exec("ALTER TABLE plan_orders ADD INDEX idx_plan_orders_purchase_token (purchase_token(100))"); } catch (Exception $e) {}
     }
 
-    // Add Bazaar credential columns to kateb_settings if missing
-    $settingsCols = $pdo->query("SHOW COLUMNS FROM kateb_settings")->fetchAll(PDO::FETCH_COLUMN);
+    // Add Bazaar credential columns to YADETO_settings if missing
+    $settingsCols = $pdo->query("SHOW COLUMNS FROM YADETO_settings")->fetchAll(PDO::FETCH_COLUMN);
     $bazaarSettingsCols = [
         'bazaar_client_id' => "ADD COLUMN bazaar_client_id TEXT DEFAULT ''",
         'bazaar_client_secret' => "ADD COLUMN bazaar_client_secret TEXT DEFAULT ''",
@@ -303,30 +303,30 @@ function init_tables(): void {
     ];
     foreach ($bazaarSettingsCols as $col => $sql) {
         if (!in_array($col, $settingsCols)) {
-            $pdo->exec("ALTER TABLE kateb_settings $sql");
+            $pdo->exec("ALTER TABLE YADETO_settings $sql");
         }
     }
 
     // Insert default settings row ONLY on first run (when empty)
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM kateb_settings WHERE id = 1");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM YADETO_settings WHERE id = 1");
     $stmt->execute();
     if ((int)$stmt->fetchColumn() === 0) {
-        $pdo->prepare("INSERT INTO kateb_settings (id, sms_api_key, sms_pattern_code, sms_line_number, ai_api_url, ai_api_key, ai_models, zarinpal_merchant_id, zarinpal_sandbox)
+        $pdo->prepare("INSERT INTO YADETO_settings (id, sms_api_key, sms_pattern_code, sms_line_number, ai_api_url, ai_api_key, ai_models, zarinpal_merchant_id, zarinpal_sandbox)
             VALUES (1, '', '', '', 'https://ai.parspack.com/v1', '', 'qwen/qwen3-32b', '00000000-0000-0000-0000-000000000000', 1)")
             ->execute();
     }
 
     // Insert default admin user (phone: 09120000000, password: admin123)
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM kateb_users WHERE phone = '09120000000'");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM YADETO_users WHERE phone = '09120000000'");
     $stmt->execute();
     if ((int)$stmt->fetchColumn() === 0) {
         $adminId = 'a0000000-0000-0000-0000-000000000001';
-        $pdo->prepare("INSERT INTO kateb_users (id, phone, full_name, is_admin, password_hash, coins)
+        $pdo->prepare("INSERT INTO YADETO_users (id, phone, full_name, is_admin, password_hash, coins)
             VALUES (?, '09120000000', 'مدیر سیستم', 1, ?, 100)")
             ->execute([$adminId, hash_password('admin123')]);
     } else {
         // Ensure existing admin stays admin
-        $pdo->prepare("UPDATE kateb_users SET is_admin = 1 WHERE phone = '09120000000'")->execute();
+        $pdo->prepare("UPDATE YADETO_users SET is_admin = 1 WHERE phone = '09120000000'")->execute();
     }
 }
 
@@ -334,7 +334,7 @@ function init_tables(): void {
 function get_settings(): array {
     static $cached = null;
     if ($cached !== null) return $cached;
-    $stmt = db()->prepare("SELECT * FROM kateb_settings WHERE id = 1");
+    $stmt = db()->prepare("SELECT * FROM YADETO_settings WHERE id = 1");
     $stmt->execute();
     $row = $stmt->fetch();
     $cached = $row ?: [
@@ -351,12 +351,12 @@ function get_settings(): array {
 function get_session_user(): ?array {
     $token = get_auth_token();
     if (!$token) return null;
-    $stmt = db()->prepare("SELECT user_id, expires_at FROM kateb_sessions WHERE token = ? LIMIT 1");
+    $stmt = db()->prepare("SELECT user_id, expires_at FROM YADETO_sessions WHERE token = ? LIMIT 1");
     $stmt->execute([$token]);
     $sess = $stmt->fetch();
     if (!$sess) return null;
     if (strtotime($sess['expires_at']) < time()) return null;
-    $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start, plan_expires_at FROM kateb_users WHERE id = ? LIMIT 1");
+    $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start, plan_expires_at FROM YADETO_users WHERE id = ? LIMIT 1");
     $stmt->execute([$sess['user_id']]);
     $user = $stmt->fetch();
     if (!$user) return null;
@@ -385,7 +385,7 @@ function reset_usage_if_needed(array &$user): void {
         if ($startDay !== $todayDay) $needsReset = true;
     }
     if ($needsReset) {
-        db()->prepare("UPDATE kateb_users SET ai_assistant_usage_this_month = 0, template_usage_this_month = 0, usage_cycle_start = ? WHERE id = ?")
+        db()->prepare("UPDATE YADETO_users SET ai_assistant_usage_this_month = 0, template_usage_this_month = 0, usage_cycle_start = ? WHERE id = ?")
             ->execute([now_iso(), $user['id']]);
         $user['ai_assistant_usage_this_month'] = 0;
         $user['template_usage_this_month'] = 0;
@@ -395,7 +395,7 @@ function reset_usage_if_needed(array &$user): void {
 function create_session(string $userId, string $phone): string {
     $token = gen_token();
     $expires = date('Y-m-d H:i:s', time() + 180 * 86400);
-    db()->prepare("INSERT INTO kateb_sessions (token, user_id, phone, expires_at) VALUES (?, ?, ?, ?)")
+    db()->prepare("INSERT INTO YADETO_sessions (token, user_id, phone, expires_at) VALUES (?, ?, ?, ?)")
         ->execute([$token, $userId, $phone, $expires]);
     return $token;
 }
@@ -727,10 +727,10 @@ try {
             $code = $result['body']['data']['code'] ?? null;
             if ($code == 100 || $code == 101 || $refId) {
                 db()->prepare("UPDATE coin_orders SET status='paid', ref_id=?, paid_at=? WHERE id=?")->execute([(string)$refId, now_iso(), $order['id']]);
-                $stmt = db()->prepare("SELECT coins FROM kateb_users WHERE id = ? LIMIT 1");
+                $stmt = db()->prepare("SELECT coins FROM YADETO_users WHERE id = ? LIMIT 1");
                 $stmt->execute([$order['user_id']]);
                 $newCoins = (int)$stmt->fetchColumn() + (int)$order['coins'];
-                db()->prepare("UPDATE kateb_users SET coins = ? WHERE id = ?")->execute([$newCoins, $order['user_id']]);
+                db()->prepare("UPDATE YADETO_users SET coins = ? WHERE id = ?")->execute([$newCoins, $order['user_id']]);
                 json_out(['success' => true, 'status' => 'paid', 'order_id' => $order['id'], 'coins' => $newCoins, 'added' => (int)$order['coins'], 'ref_id' => $refId]);
             }
             db()->prepare("UPDATE coin_orders SET status='failed' WHERE id=?")->execute([$order['id']]);
@@ -754,7 +754,7 @@ try {
                 $durationMonths = (int)($planOrder['duration_months'] ?? 1);
                 db()->prepare("UPDATE plan_orders SET status='paid', ref_id=?, paid_at=? WHERE id=?")->execute([(string)$refId, now_iso(), $planOrder['id']]);
                 $expiryDate = date('Y-m-d H:i:s', strtotime("+{$durationMonths} months"));
-                db()->prepare("UPDATE kateb_users SET plan_type=?, ai_assistant_usage_this_month=0, template_usage_this_month=0, usage_cycle_start=?, plan_expires_at=? WHERE id=?")
+                db()->prepare("UPDATE YADETO_users SET plan_type=?, ai_assistant_usage_this_month=0, template_usage_this_month=0, usage_cycle_start=?, plan_expires_at=? WHERE id=?")
                     ->execute([$planOrder['plan_id'], now_iso(), $expiryDate, $planOrder['user_id']]);
                 json_out(['success' => true, 'status' => 'paid', 'order_id' => $planOrder['id'], 'ref_id' => $refId, 'plan_id' => $planOrder['plan_id']]);
             }
@@ -795,15 +795,15 @@ try {
     if ($act === 'otp_send') {
         $phone = (string)($b['phone'] ?? '');
         if (!preg_match('/^09\d{9}$/', $phone)) json_error('شماره موبایل نامعتبر', 400);
-        $stmt = db()->prepare("SELECT COUNT(*) FROM kateb_otp_codes WHERE phone = ? AND created_at > ?");
+        $stmt = db()->prepare("SELECT COUNT(*) FROM YADETO_otp_codes WHERE phone = ? AND created_at > ?");
         $stmt->execute([$phone, date('Y-m-d H:i:s', time() - 600)]);
         if ((int)$stmt->fetchColumn() >= 5) json_error('تعداد درخواست زیاد است. کمی صبر کنید.', 429);
-        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM kateb_users WHERE phone = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM YADETO_users WHERE phone = ? LIMIT 1");
         $stmt->execute([$phone]);
         $isExisting = (bool)$stmt->fetch();
         $code = gen_otp();
         $expires = date('Y-m-d H:i:s', time() + 120);
-        db()->prepare("INSERT INTO kateb_otp_codes (id, phone, code, expires_at, used) VALUES (?, ?, ?, ?, 0)")
+        db()->prepare("INSERT INTO YADETO_otp_codes (id, phone, code, expires_at, used) VALUES (?, ?, ?, ?, 0)")
             ->execute([gen_uuid(), $phone, $code, $expires]);
         $smsSent = send_sms($phone, $code);
         json_out(['success' => true, 'message' => 'کد تایید ارسال شد', 'sms_sent' => $smsSent, 'is_existing_user' => $isExisting, 'code' => $smsSent ? null : $code]);
@@ -816,13 +816,13 @@ try {
         $fullName = (string)($b['full_name'] ?? '');
         $password = (string)($b['password'] ?? '');
         if (!preg_match('/^09\d{9}$/', $phone)) json_error('شماره موبایل نامعتبر', 400);
-        $stmt = db()->prepare("SELECT id, used, expires_at FROM kateb_otp_codes WHERE phone = ? AND code = ? AND used = 0 AND expires_at > ? ORDER BY created_at DESC LIMIT 1");
+        $stmt = db()->prepare("SELECT id, used, expires_at FROM YADETO_otp_codes WHERE phone = ? AND code = ? AND used = 0 AND expires_at > ? ORDER BY created_at DESC LIMIT 1");
         $stmt->execute([$phone, $code, now_iso()]);
         $otp = $stmt->fetch();
         if (!$otp) json_error('کد تایید اشتباه یا منقضی شده', 400);
-        db()->prepare("UPDATE kateb_otp_codes SET used = 1 WHERE id = ?")->execute([$otp['id']]);
+        db()->prepare("UPDATE YADETO_otp_codes SET used = 1 WHERE id = ?")->execute([$otp['id']]);
 
-        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM kateb_users WHERE phone = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM YADETO_users WHERE phone = ? LIMIT 1");
         $stmt->execute([$phone]);
         $user = $stmt->fetch();
         $isNewUser = false;
@@ -832,12 +832,12 @@ try {
             $isNewUser = true;
             $newId = gen_uuid();
             $hash = hash_password($password);
-            db()->prepare("INSERT INTO kateb_users (id, phone, full_name, password_hash, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start) VALUES (?, ?, ?, ?, 10, 'free', 0, 0, ?)")
+            db()->prepare("INSERT INTO YADETO_users (id, phone, full_name, password_hash, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start) VALUES (?, ?, ?, ?, 10, 'free', 0, 0, ?)")
                 ->execute([$newId, $phone, $fullName, $hash, now_iso()]);
             $user = ['id' => $newId, 'phone' => $phone, 'full_name' => $fullName, 'is_admin' => 0, 'coins' => 10, 'plan_type' => 'free', 'ai_assistant_usage_this_month' => 0, 'template_usage_this_month' => 0];
         } else {
             if ($fullName && !$user['full_name']) {
-                db()->prepare("UPDATE kateb_users SET full_name = ? WHERE id = ?")->execute([$fullName, $user['id']]);
+                db()->prepare("UPDATE YADETO_users SET full_name = ? WHERE id = ?")->execute([$fullName, $user['id']]);
                 $user['full_name'] = $fullName;
             }
         }
@@ -866,7 +866,7 @@ try {
         $password = (string)($b['password'] ?? '');
         if (!preg_match('/^09\d{9}$/', $phone)) json_error('شماره موبایل نامعتبر', 400);
         if (!$password) json_error('رمز عبور را وارد کنید', 400);
-        $stmt = db()->prepare("SELECT id, phone, full_name, password_hash, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM kateb_users WHERE phone = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT id, phone, full_name, password_hash, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month FROM YADETO_users WHERE phone = ? LIMIT 1");
         $stmt->execute([$phone]);
         $user = $stmt->fetch();
         if (!$user || !$user['password_hash']) json_error('شماره موبایل یا رمز عبور اشتباه است', 401);
@@ -903,7 +903,7 @@ try {
     // ─── Auth: signout ────────────────────────────────────────
     if ($act === 'signout') {
         $token = get_auth_token();
-        if ($token) db()->prepare("DELETE FROM kateb_sessions WHERE token = ?")->execute([$token]);
+        if ($token) db()->prepare("DELETE FROM YADETO_sessions WHERE token = ?")->execute([$token]);
         json_out(['success' => true]);
     }
 
@@ -913,7 +913,7 @@ try {
         if (!$user) json_error('احراز هویت نشده', 401);
         $password = (string)($b['password'] ?? '');
         if (strlen($password) < 4) json_error('رمز عبور باید حداقل ۴ کاراکتر باشد', 400);
-        db()->prepare("UPDATE kateb_users SET password_hash = ? WHERE id = ?")
+        db()->prepare("UPDATE YADETO_users SET password_hash = ? WHERE id = ?")
             ->execute([hash_password($password), $user['id']]);
         json_out(['success' => true]);
     }
@@ -924,7 +924,7 @@ try {
         if (!$user) json_error('احراز هویت نشده', 401);
         $fullName = trim((string)($b['full_name'] ?? ''));
         if (!$fullName) json_error('نام نمی‌تواند خالی باشد', 400);
-        db()->prepare("UPDATE kateb_users SET full_name = ? WHERE id = ?")->execute([$fullName, $user['id']]);
+        db()->prepare("UPDATE YADETO_users SET full_name = ? WHERE id = ?")->execute([$fullName, $user['id']]);
         json_out(['success' => true, 'user' => array_merge($user, ['full_name' => $fullName])]);
     }
 
@@ -936,14 +936,14 @@ try {
     // ─── Usage: increment AI assistant ───────────────────────
     if ($act === 'increment_ai_usage') {
         $newCount = (int)$user['ai_assistant_usage_this_month'] + 1;
-        db()->prepare("UPDATE kateb_users SET ai_assistant_usage_this_month = ? WHERE id = ?")->execute([$newCount, $uid]);
+        db()->prepare("UPDATE YADETO_users SET ai_assistant_usage_this_month = ? WHERE id = ?")->execute([$newCount, $uid]);
         json_out(['success' => true, 'ai_assistant_usage_this_month' => $newCount]);
     }
 
     // ─── Usage: increment template ──────────────────────────
     if ($act === 'increment_template_usage') {
         $newCount = (int)$user['template_usage_this_month'] + 1;
-        db()->prepare("UPDATE kateb_users SET template_usage_this_month = ? WHERE id = ?")->execute([$newCount, $uid]);
+        db()->prepare("UPDATE YADETO_users SET template_usage_this_month = ? WHERE id = ?")->execute([$newCount, $uid]);
         json_out(['success' => true, 'template_usage_this_month' => $newCount]);
     }
 
@@ -1075,19 +1075,19 @@ try {
     }
 
     if ($act === 'coins_balance') {
-        $stmt = db()->prepare("SELECT coins FROM kateb_users WHERE id = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT coins FROM YADETO_users WHERE id = ? LIMIT 1");
         $stmt->execute([$uid]);
         json_out(['coins' => (int)($stmt->fetchColumn() ?? 0)]);
     }
     if ($act === 'coins_deduct') {
         $amount = max(1, (int)($b['amount'] ?? 0));
         $reason = (string)($b['reason'] ?? '');
-        $stmt = db()->prepare("SELECT coins FROM kateb_users WHERE id = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT coins FROM YADETO_users WHERE id = ? LIMIT 1");
         $stmt->execute([$uid]);
         $current = (int)$stmt->fetchColumn();
         if ($current < $amount) json_error('سکه کافی ندارید', 402);
         $newCoins = $current - $amount;
-        db()->prepare("UPDATE kateb_users SET coins = ? WHERE id = ?")->execute([$newCoins, $uid]);
+        db()->prepare("UPDATE YADETO_users SET coins = ? WHERE id = ?")->execute([$newCoins, $uid]);
         json_out(['success' => true, 'coins' => $newCoins, 'reason' => $reason]);
     }
 
@@ -1111,13 +1111,13 @@ try {
         $callbackUrl = (string)($b['callback_url'] ?? '');
         // Reject localhost / insecure callback URLs — always use production HTTPS
         if ($callbackUrl === '' || preg_match('#^https?://(localhost|127\.0\.0\.1|10\.|192\.168\.)#i', $callbackUrl)) {
-            $callbackUrl = 'https://app.kateb.site/payment/callback';
+            $callbackUrl = 'https://app.YADETO.site/payment/callback';
         }
         $baseUrl = $sandbox ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json' : 'https://payment.zarinpal.com/pg/v4/payment/request.json';
         $gatewayUrl = $sandbox ? 'https://sandbox.zarinpal.com/pg/StartPay/' : 'https://payment.zarinpal.com/pg/StartPay/';
         $result = http_post_json($baseUrl, [
             'merchant_id' => $merchantId, 'amount' => $price, 'currency' => 'IRT',
-            'description' => "خرید {$coins} سکه - کاتب", 'callback_url' => $callbackUrl,
+            'description' => "خرید {$coins} سکه - یادتو", 'callback_url' => $callbackUrl,
         ]);
         $authority = $result['body']['data']['authority'] ?? null;
         if (!$authority) {
@@ -1148,10 +1148,10 @@ try {
         if ($code == 100 || $code == 101 || $refId) {
             db()->prepare("UPDATE coin_orders SET status='paid', ref_id=?, paid_at=? WHERE id=?")
                 ->execute([(string)$refId, now_iso(), $order['id']]);
-            $stmt = db()->prepare("SELECT coins FROM kateb_users WHERE id = ? LIMIT 1");
+            $stmt = db()->prepare("SELECT coins FROM YADETO_users WHERE id = ? LIMIT 1");
             $stmt->execute([$uid]);
             $newCoins = (int)$stmt->fetchColumn() + (int)$order['coins'];
-            db()->prepare("UPDATE kateb_users SET coins = ? WHERE id = ?")->execute([$newCoins, $uid]);
+            db()->prepare("UPDATE YADETO_users SET coins = ? WHERE id = ?")->execute([$newCoins, $uid]);
             json_out(['success' => true, 'coins' => $newCoins, 'ref_id' => $refId, 'added' => (int)$order['coins']]);
         }
         db()->prepare("UPDATE coin_orders SET status='failed' WHERE id=?")->execute([$order['id']]);
@@ -1179,13 +1179,13 @@ try {
         $sandbox = (bool)($s['zarinpal_sandbox'] ?? true);
         $callbackUrl = (string)($b['callback_url'] ?? '');
         if ($callbackUrl === '' || preg_match('#^https?://(localhost|127\.0\.0\.1|10\.|192\.168\.)#i', $callbackUrl)) {
-            $callbackUrl = 'https://app.kateb.site/payment/callback';
+            $callbackUrl = 'https://app.YADETO.site/payment/callback';
         }
         $baseUrl = $sandbox ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json' : 'https://payment.zarinpal.com/pg/v4/payment/request.json';
         $gatewayUrl = $sandbox ? 'https://sandbox.zarinpal.com/pg/StartPay/' : 'https://payment.zarinpal.com/pg/StartPay/';
         $result = http_post_json($baseUrl, [
             'merchant_id' => $merchantId, 'amount' => $price, 'currency' => 'IRT',
-            'description' => "خرید طرح {$planId} ({$durationMonths} ماه) - کاتب", 'callback_url' => $callbackUrl,
+            'description' => "خرید طرح {$planId} ({$durationMonths} ماه) - یادتو", 'callback_url' => $callbackUrl,
         ]);
         $authority = $result['body']['data']['authority'] ?? null;
         if (!$authority) {
@@ -1213,12 +1213,12 @@ try {
 
         // Server-side product ID validation
         $bazaarProducts = [
-            'kateb_basic_1m' => ['plan' => 'basic', 'months' => 1],
-            'kateb_basic_3m' => ['plan' => 'basic', 'months' => 3],
-            'kateb_basic_6m' => ['plan' => 'basic', 'months' => 6],
-            'kateb_pro_1m'   => ['plan' => 'pro', 'months' => 1],
-            'kateb_pro_3m'   => ['plan' => 'pro', 'months' => 3],
-            'kateb_pro_6m'   => ['plan' => 'pro', 'months' => 6],
+            'YADETO_basic_1m' => ['plan' => 'basic', 'months' => 1],
+            'YADETO_basic_3m' => ['plan' => 'basic', 'months' => 3],
+            'YADETO_basic_6m' => ['plan' => 'basic', 'months' => 6],
+            'YADETO_pro_1m'   => ['plan' => 'pro', 'months' => 1],
+            'YADETO_pro_3m'   => ['plan' => 'pro', 'months' => 3],
+            'YADETO_pro_6m'   => ['plan' => 'pro', 'months' => 6],
         ];
         if (!isset($bazaarProducts[$productId])) json_error('محصول نامعتبر است', 400);
         $planInfo = $bazaarProducts[$productId];
@@ -1291,13 +1291,13 @@ try {
                 json_error('دریافت توکن کافه‌بازار ناموفق بود — ' . $detail, 500);
             }
             $newExpiry = date('Y-m-d H:i:s', time() + (int)$expiresIn - 60);
-            db()->prepare("UPDATE kateb_settings SET bazaar_access_token = ?, bazaar_access_token_expires = ? WHERE id = 1")
+            db()->prepare("UPDATE YADETO_settings SET bazaar_access_token = ?, bazaar_access_token_expires = ? WHERE id = 1")
                 ->execute([$newToken, $newExpiry]);
             $accessToken = $newToken;
         }
 
         // Verify purchase with Bazaar Developer API
-        $packageName = 'com.kateb.app';
+        $packageName = 'com.YADETO.app';
 
         // Both reference clients pass the access token as an `access_token` QUERY
         // PARAMETER, not an Authorization header. The previous revision used a Bearer
@@ -1382,14 +1382,14 @@ try {
             }
 
             // Activate subscription: extend from current expiry if still active, else from now
-            $stmt = $pdo->prepare("SELECT plan_type, plan_expires_at FROM kateb_users WHERE id = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT plan_type, plan_expires_at FROM YADETO_users WHERE id = ? LIMIT 1");
             $stmt->execute([$uid]);
             $userRow = $stmt->fetch();
             $currentExpiry = $userRow['plan_expires_at'] ?? null;
             $baseDate = ($currentExpiry && strtotime($currentExpiry) > time()) ? $currentExpiry : now_iso();
             $newExpiry = date('Y-m-d H:i:s', strtotime("+{$durationMonths} months", strtotime($baseDate)));
 
-            $pdo->prepare("UPDATE kateb_users SET plan_type=?, plan_expires_at=?, ai_assistant_usage_this_month=0, template_usage_this_month=0, usage_cycle_start=? WHERE id=?")
+            $pdo->prepare("UPDATE YADETO_users SET plan_type=?, plan_expires_at=?, ai_assistant_usage_this_month=0, template_usage_this_month=0, usage_cycle_start=? WHERE id=?")
                 ->execute([$planId, $newExpiry, now_iso(), $uid]);
 
             $pdo->commit();
@@ -1412,22 +1412,22 @@ try {
     if (!$user['is_admin']) json_error('دسترسی غیرمجاز', 403);
 
     if ($act === 'admin_users_list') {
-        $stmt = db()->query("SELECT id, phone, full_name, is_admin, coins, plan_type, created_at FROM kateb_users ORDER BY created_at DESC");
+        $stmt = db()->query("SELECT id, phone, full_name, is_admin, coins, plan_type, created_at FROM YADETO_users ORDER BY created_at DESC");
         json_out(['data' => $stmt->fetchAll()]);
     }
     if ($act === 'admin_user_set_coins') {
         $targetId = (string)($b['id'] ?? '');
         $newVal = max(0, floor((int)($b['coins'] ?? 0)));
         if (!$targetId) json_error('کاربر نامعتبر', 400);
-        db()->prepare("UPDATE kateb_users SET coins = ? WHERE id = ?")->execute([$newVal, $targetId]);
+        db()->prepare("UPDATE YADETO_users SET coins = ? WHERE id = ?")->execute([$newVal, $targetId]);
         json_out(['success' => true, 'coins' => $newVal]);
     }
     if ($act === 'admin_user_add_coins') {
         $targetId = (string)($b['id'] ?? '');
         $amount = (int)($b['amount'] ?? 0);
         if (!$targetId || !$amount) json_error('مقادیر نامعتبر', 400);
-        db()->prepare("UPDATE kateb_users SET coins = GREATEST(0, coins + ?) WHERE id = ?")->execute([$amount, $targetId]);
-        $stmt = db()->prepare("SELECT coins FROM kateb_users WHERE id = ? LIMIT 1");
+        db()->prepare("UPDATE YADETO_users SET coins = GREATEST(0, coins + ?) WHERE id = ?")->execute([$amount, $targetId]);
+        $stmt = db()->prepare("SELECT coins FROM YADETO_users WHERE id = ? LIMIT 1");
         $stmt->execute([$targetId]);
         json_out(['success' => true, 'coins' => (int)$stmt->fetchColumn()]);
     }
@@ -1439,12 +1439,12 @@ try {
         if (!empty($b['password'])) { $fields[] = 'password_hash = ?'; $vals[] = hash_password((string)$b['password']); }
         if ($fields) {
             $vals[] = $id;
-            db()->prepare("UPDATE kateb_users SET " . implode(', ', $fields) . " WHERE id = ?")->execute($vals);
+            db()->prepare("UPDATE YADETO_users SET " . implode(', ', $fields) . " WHERE id = ?")->execute($vals);
         }
         json_out(['success' => true]);
     }
     if ($act === 'admin_user_delete') {
-        db()->prepare("DELETE FROM kateb_users WHERE id = ?")->execute([(string)($b['id'] ?? '')]);
+        db()->prepare("DELETE FROM YADETO_users WHERE id = ?")->execute([(string)($b['id'] ?? '')]);
         json_out(['success' => true]);
     }
     if ($act === 'admin_user_set_plan') {
@@ -1456,10 +1456,10 @@ try {
 
         $cycleStart = now_iso();
         $expiryDate = $planId === 'free' ? null : date('Y-m-d H:i:s', strtotime('+30 days'));
-        db()->prepare("UPDATE kateb_users SET plan_type = ?, ai_assistant_usage_this_month = 0, template_usage_this_month = 0, usage_cycle_start = ?, plan_expires_at = ? WHERE id = ?")
+        db()->prepare("UPDATE YADETO_users SET plan_type = ?, ai_assistant_usage_this_month = 0, template_usage_this_month = 0, usage_cycle_start = ?, plan_expires_at = ? WHERE id = ?")
             ->execute([$planId, $cycleStart, $expiryDate, $targetId]);
 
-        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start, created_at FROM kateb_users WHERE id = ? LIMIT 1");
+        $stmt = db()->prepare("SELECT id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month, usage_cycle_start, created_at FROM YADETO_users WHERE id = ? LIMIT 1");
         $stmt->execute([$targetId]);
         $updated = $stmt->fetch();
         json_out(['success' => true, 'data' => $updated]);
@@ -1471,7 +1471,7 @@ try {
         $password = (string)($b['password'] ?? '');
         if (strlen($password) < 4) json_error('رمز کوتاه', 400);
         $newId = gen_uuid();
-        db()->prepare("INSERT INTO kateb_users (id, phone, full_name, is_admin, password_hash) VALUES (?, ?, ?, ?, ?)")
+        db()->prepare("INSERT INTO YADETO_users (id, phone, full_name, is_admin, password_hash) VALUES (?, ?, ?, ?, ?)")
             ->execute([$newId, $phone, $b['full_name'] ?? '', ($b['is_admin'] ?? false) ? 1 : 0, hash_password($password)]);
         json_out(['data' => ['id' => $newId]]);
     }
@@ -1486,19 +1486,19 @@ try {
         if (array_key_exists('zarinpal_sandbox', $b)) { $fields[] = 'zarinpal_sandbox = ?'; $vals[] = $b['zarinpal_sandbox'] ? 1 : 0; }
         $fields[] = 'updated_at = ?'; $vals[] = now_iso();
         $vals[] = 1;
-        db()->prepare("UPDATE kateb_settings SET " . implode(', ', $fields) . " WHERE id = ?")->execute($vals);
+        db()->prepare("UPDATE YADETO_settings SET " . implode(', ', $fields) . " WHERE id = ?")->execute($vals);
         json_out(['success' => true]);
     }
     if ($act === 'admin_stats') {
         $counts = ['users' => 0, 'tasks' => 0, 'events' => 0];
-        $counts['users'] = (int)db()->query("SELECT COUNT(*) FROM kateb_users")->fetchColumn();
+        $counts['users'] = (int)db()->query("SELECT COUNT(*) FROM YADETO_users")->fetchColumn();
         try { $counts['tasks'] = (int)db()->query("SELECT COUNT(*) FROM calendar_tasks")->fetchColumn(); } catch (Exception $e) {}
         try { $counts['events'] = (int)db()->query("SELECT COUNT(*) FROM calendar_events")->fetchColumn(); } catch (Exception $e) {}
         json_out(['data' => $counts]);
         return;
     }
     if ($act === 'admin_subs_list') {
-        $stmt = db()->query("SELECT u.id, u.phone, u.full_name, u.plan_type, u.ai_assistant_usage_this_month, u.template_usage_this_month, u.usage_cycle_start, u.plan_expires_at FROM kateb_users u ORDER BY u.created_at DESC LIMIT 50");
+        $stmt = db()->query("SELECT u.id, u.phone, u.full_name, u.plan_type, u.ai_assistant_usage_this_month, u.template_usage_this_month, u.usage_cycle_start, u.plan_expires_at FROM YADETO_users u ORDER BY u.created_at DESC LIMIT 50");
         $rows = $stmt->fetchAll();
         $planLimits = ['free' => [10, 15], 'basic' => [100, 200], 'pro' => [500, 1000]];
         $enriched = [];
@@ -1516,13 +1516,13 @@ try {
                 'started_at' => $r['usage_cycle_start'] ?? null,
                 'expires_at' => $r['plan_expires_at'] ?? null,
                 'cycle_start' => $r['usage_cycle_start'] ?? null,
-                'kateb_users' => ['full_name' => $r['full_name'], 'phone' => $r['phone']],
+                'YADETO_users' => ['full_name' => $r['full_name'], 'phone' => $r['phone']],
             ];
         }
         json_out(['data' => $enriched]);
     }
     if ($act === 'admin_transactions_list') {
-        $stmt = db()->query("SELECT po.id, po.plan_id, po.amount_toman, po.status, po.authority, po.ref_id, po.created_at, po.paid_at, po.payment_provider, po.product_id, po.bazaar_purchase_id, u.full_name, u.phone FROM plan_orders po JOIN kateb_users u ON po.user_id = u.id ORDER BY po.created_at DESC LIMIT 50");
+        $stmt = db()->query("SELECT po.id, po.plan_id, po.amount_toman, po.status, po.authority, po.ref_id, po.created_at, po.paid_at, po.payment_provider, po.product_id, po.bazaar_purchase_id, u.full_name, u.phone FROM plan_orders po JOIN YADETO_users u ON po.user_id = u.id ORDER BY po.created_at DESC LIMIT 50");
         $rows = $stmt->fetchAll();
         $enriched = [];
         foreach ($rows as $r) {
@@ -1538,7 +1538,7 @@ try {
                 'payment_provider' => $r['payment_provider'] ?? 'zarinpal',
                 'product_id' => $r['product_id'] ?? '',
                 'bazaar_purchase_id' => $r['bazaar_purchase_id'] ?? null,
-                'kateb_users' => ['full_name' => $r['full_name'], 'phone' => $r['phone']],
+                'YADETO_users' => ['full_name' => $r['full_name'], 'phone' => $r['phone']],
             ];
         }
         json_out(['data' => $enriched]);

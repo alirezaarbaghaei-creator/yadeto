@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Clock, CalendarPlus } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock, CalendarPlus, BellRing } from 'lucide-react';
 import type { Task, Priority, TaskCategory, RecurrenceType, MJalaliDate } from '@/types/calendar';
 import { MiniCalendar, toISO } from './MiniCalendar';
 import { getTodayJalali, isoDateToJalali, formatJalali } from '@/utils/jalaliDate';
+import { scheduleTaskReminder, requestNotificationPermissions } from '@/services/calendar/notifications';
 
 interface TaskModalProps {
   open: boolean;
@@ -37,6 +38,16 @@ const RECURRENCES: { value: RecurrenceType; label: string }[] = [
   { value: 'yearly', label: 'سالانه' },
 ];
 
+const REMINDER_OPTIONS: { value: number; label: string }[] = [
+  { value: -1, label: 'بدون یادآوری' },
+  { value: 0, label: 'در لحظه شروع' },
+  { value: 5, label: '۵ دقیقه قبل' },
+  { value: 15, label: '۱۵ دقیقه قبل' },
+  { value: 30, label: '۳۰ دقیقه قبل' },
+  { value: 60, label: '۱ ساعت قبل' },
+  { value: 1440, label: '۱ روز قبل' },
+];
+
 
 const HOURS24 = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2);
@@ -56,6 +67,7 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState<TaskCategory>('other');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
+  const [reminder, setReminder] = useState<number>(15);
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
@@ -74,6 +86,7 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
     setPriority(task?.priority || 'medium');
     setCategory(task?.category || 'other');
     setRecurrence(task?.recurrence || 'none');
+    setReminder(task?.reminder ?? 15);
     setShowCalendar(false);
   }, [open, task, defaultDate]);
 
@@ -81,17 +94,23 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
 
   const handleSave = () => {
     if (!title.trim()) return;
+    const dueDate = toISO(selectedJalali);
+    const dueTime = hasTime ? time : undefined;
+    if (dueTime && reminder >= 0) {
+      void requestNotificationPermissions();
+      void scheduleTaskReminder(title.trim(), dueDate, dueTime, reminder);
+    }
     onSave({
       title: title.trim(),
-      dueDate: toISO(selectedJalali),
-      dueTime: hasTime ? time : undefined,
+      dueDate,
+      dueTime,
       duration: hasTime ? Math.max(15, Math.round(
         ((new Date(`2000-01-01T${endTime}:00`).getTime() - new Date(`2000-01-01T${time}:00`).getTime()) / 60000)
       )) || 60 : undefined,
       priority,
       category,
       recurrence,
-      reminder: 15,
+      reminder,
     });
     onClose();
   };
@@ -248,6 +267,27 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
               ))}
             </div>
           </div>
+
+          {hasTime && (
+            <div>
+              <label className="mb-1 flex items-center gap-1 text-xs text-slate-500">
+                <BellRing className="h-3.5 w-3.5 text-amber-500" />
+                یادآوری و آلارم
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {REMINDER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setReminder(opt.value)}
+                    className={chip(reminder === opt.value, 'border-amber-400 bg-amber-50 text-amber-800')}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <button

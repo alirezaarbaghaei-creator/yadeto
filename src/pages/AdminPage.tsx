@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Settings, BarChart3, MessageSquare, Cpu, Trash2, Plus, Shield,
@@ -243,7 +243,7 @@ function UsersTab({ users, onReload }: { users: AdminUserRow[]; onReload: () => 
       return;
     }
     exportToExcel({
-      filename: `kateb-users-${new Date().toISOString().slice(0, 10)}`,
+      filename: `YADETO-users-${new Date().toISOString().slice(0, 10)}`,
       name: 'کاربران',
       headers: ['نام', 'شماره موبایل', 'نقش', 'طرح', 'سکه', 'تاریخ عضویت'],
       rows: filtered.map((u) => {
@@ -630,7 +630,7 @@ function SubsTab() {
                 return (
                   <tr key={s.id} className="border-b border-slate-100/60 hover:bg-slate-50/40">
                     <td className="px-4 py-3 text-slate-800 font-medium">
-                      {s.kateb_users?.full_name || s.kateb_users?.phone || '—'}
+                      {s.YADETO_users?.full_name || s.YADETO_users?.phone || '—'}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
@@ -739,7 +739,7 @@ function TransactionsTab() {
                 return (
                   <tr key={t.id} className="border-b border-slate-100/60 hover:bg-slate-50/40">
                     <td className="px-4 py-3 text-slate-800 font-medium text-xs">
-                      {t.kateb_users?.full_name || t.kateb_users?.phone || '—'}
+                      {t.YADETO_users?.full_name || t.YADETO_users?.phone || '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">{plan?.name ?? t.plan_id}</td>
                     <td className="px-4 py-3 text-xs font-semibold text-slate-700">
@@ -1087,7 +1087,7 @@ function DatabaseTab() {
 
   const handleReset = () => {
     setApiUrl('');
-    setUrl('https://app.kateb.site/api/index.php');
+    setUrl('https://app.YADETO.site/api/index.php');
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

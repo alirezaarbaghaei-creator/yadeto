@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Loader2, Receipt, Clock, Home } from 'lucide-react';
 import * as api from '@/lib/api';
@@ -44,13 +44,13 @@ export function PaymentCallback({ onDone }: PaymentCallbackProps) {
 
     // External browser: launch the app via custom scheme
     const appUrl = orderId
-      ? `kateb://payment/result?order_id=${orderId}`
-      : 'kateb://payment/result';
+      ? `YADETO://payment/result?order_id=${orderId}`
+      : 'YADETO://payment/result';
     window.location.href = appUrl;
 
     // Fallback if app not installed — redirect to website after delay
     setTimeout(() => {
-      window.location.href = 'https://app.kateb.site/';
+      window.location.href = 'https://app.YADETO.site/';
     }, 2000);
   };
 

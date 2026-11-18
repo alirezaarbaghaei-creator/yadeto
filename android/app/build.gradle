@@ -7,10 +7,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.kateb.app"
+    namespace = "com.yadeto.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.kateb.app"
+        applicationId "com.yadeto.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // The in-app diagnostics panel was removed from the release build; log
@@ -50,7 +50,7 @@ android {
     }
     buildTypes {
         debug {
-            // Debug builds install as com.kateb.app.debug so they do not
+            // Debug builds install as com.yadeto.app.debug so they do not
             // conflict with the release package signed with the release key.
             applicationIdSuffix '.debug'
             versionNameSuffix '-debug'

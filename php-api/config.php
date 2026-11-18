@@ -1,18 +1,18 @@
-<?php
+﻿<?php
 /**
- * Kateb API — Database Configuration
+ * YADETO API — Database Configuration
  *
  * ONLY database connection credentials live here.
  * All other settings (AI, SMS, Zarinpal) are stored in and
- * read from the kateb_settings table in the database.
+ * read from the YADETO_settings table in the database.
  *
  * Edit these values to match your hosting's MySQL database.
  */
 
 return [
-    'db_host' => getenv('KATEB_DB_HOST') ?: 'localhost',
-    'db_name' => getenv('KATEB_DB_NAME') ?: 'kateb',
-    'db_user' => getenv('KATEB_DB_USER') ?: 'kateb',
-    'db_pass' => getenv('KATEB_DB_PASS') ?: 'CHANGE_THIS_PASSWORD',
+    'db_host' => getenv('YADETO_DB_HOST') ?: 'localhost',
+    'db_name' => getenv('YADETO_DB_NAME') ?: 'YADETO',
+    'db_user' => getenv('YADETO_DB_USER') ?: 'YADETO',
+    'db_pass' => getenv('YADETO_DB_PASS') ?: 'CHANGE_THIS_PASSWORD',
     'db_charset' => 'utf8mb4',
 ];

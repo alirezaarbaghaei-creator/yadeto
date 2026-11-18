@@ -1,4 +1,4 @@
-/*
+﻿/*
 # Zarinpal payments + coin packages
 
 ## Purpose
@@ -18,13 +18,13 @@
 - created_at, paid_at
 
 ## Modified Tables
-### kateb_settings
+### YADETO_settings
 - zarinpal_merchant_id (text)
 - zarinpal_sandbox (boolean, default true)
 */
 
-ALTER TABLE kateb_settings ADD COLUMN IF NOT EXISTS zarinpal_merchant_id text DEFAULT '';
-ALTER TABLE kateb_settings ADD COLUMN IF NOT EXISTS zarinpal_sandbox boolean DEFAULT true;
+ALTER TABLE YADETO_settings ADD COLUMN IF NOT EXISTS zarinpal_merchant_id text DEFAULT '';
+ALTER TABLE YADETO_settings ADD COLUMN IF NOT EXISTS zarinpal_sandbox boolean DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS coin_orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

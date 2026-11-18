@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+﻿import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -60,7 +60,7 @@ let settingsCacheTime = 0;
 async function getSettings(): Promise<Settings> {
   const now = Date.now();
   if (cachedSettings && now - settingsCacheTime < 30000) return cachedSettings;
-  const { data } = await supabase.from("kateb_settings").select("*").eq("id", 1).maybeSingle();
+  const { data } = await supabase.from("YADETO_settings").select("*").eq("id", 1).maybeSingle();
   cachedSettings = (data as Settings) ?? {
     sms_api_key: "", sms_pattern_code: "", sms_line_number: "",
     ai_api_url: "", ai_api_key: "", ai_models: "",
@@ -107,14 +107,14 @@ async function getSessionUser(req: Request): Promise<SessionUser | null> {
   const token = getAuth(req);
   if (!token) return null;
   const { data, error } = await supabase
-    .from("kateb_sessions")
+    .from("YADETO_sessions")
     .select("user_id, expires_at")
     .eq("token", token)
     .maybeSingle();
   if (error || !data) return null;
   if (new Date(data.expires_at) < new Date()) return null;
   const { data: user } = await supabase
-    .from("kateb_users")
+    .from("YADETO_users")
     .select("id, phone, full_name, is_admin, coins, plan_type, ai_assistant_usage_this_month, template_usage_this_month")
     .eq("id", data.user_id)
     .maybeSingle();
@@ -134,7 +134,7 @@ async function getSessionUser(req: Request): Promise<SessionUser | null> {
 async function createSession(userId: string, phone: string): Promise<string> {
   const token = genToken();
   const expires = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
-  await supabase.from("kateb_sessions").insert({
+  await supabase.from("YADETO_sessions").insert({
     token, user_id: userId, phone, expires_at: expires,
   });
   return token;
@@ -157,7 +157,7 @@ Deno.serve(async (req: Request) => {
         return json({ error: "شماره موبایل نامعتبر" }, 400);
       }
       const { count } = await supabase
-        .from("kateb_otp_codes")
+        .from("YADETO_otp_codes")
         .select("id", { count: "exact", head: true })
         .eq("phone", phone)
         .gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
@@ -166,7 +166,7 @@ Deno.serve(async (req: Request) => {
       }
       // Check if user exists so frontend knows whether to ask for name+password
       const { data: existingUser } = await supabase
-        .from("kateb_users")
+        .from("YADETO_users")
         .select("id")
         .eq("phone", phone)
         .maybeSingle();
@@ -174,7 +174,7 @@ Deno.serve(async (req: Request) => {
       const code = genOtpCode();
       const expires = new Date(Date.now() + 120 * 1000).toISOString();
       const { error: insertErr } = await supabase
-        .from("kateb_otp_codes")
+        .from("YADETO_otp_codes")
         .insert({ id: genUuid(), phone, code, expires_at: expires, used: false });
       if (insertErr) return json({ error: "خطا در ثبت کد" }, 500);
       const smsSent = await sendSms(phone, code);
@@ -191,7 +191,7 @@ Deno.serve(async (req: Request) => {
         return json({ error: "شماره موبایل نامعتبر" }, 400);
       }
       const { data: otp } = await supabase
-        .from("kateb_otp_codes")
+        .from("YADETO_otp_codes")
         .select("id, code, used, expires_at")
         .eq("phone", phone)
         .eq("code", code)
@@ -201,10 +201,10 @@ Deno.serve(async (req: Request) => {
         .limit(1)
         .maybeSingle();
       if (!otp) return json({ error: "کد تایید اشتباه یا منقضی شده" }, 400);
-      await supabase.from("kateb_otp_codes").update({ used: true }).eq("id", otp.id);
+      await supabase.from("YADETO_otp_codes").update({ used: true }).eq("id", otp.id);
 
       let { data: user } = await supabase
-        .from("kateb_users")
+        .from("YADETO_users")
         .select("id, phone, full_name, is_admin, coins")
         .eq("phone", phone)
         .maybeSingle();
@@ -217,7 +217,7 @@ Deno.serve(async (req: Request) => {
         const newId = genUuid();
         const hash = await sha256(password);
         const { data: created } = await supabase
-          .from("kateb_users")
+          .from("YADETO_users")
           .insert({ id: newId, phone, full_name: fullName, password_hash: hash })
           .select("id, phone, full_name, is_admin, coins")
           .maybeSingle();
@@ -225,7 +225,7 @@ Deno.serve(async (req: Request) => {
       } else {
         // Existing user: just log in, optionally update name if provided and was empty
         if (fullName && !user.full_name) {
-          await supabase.from("kateb_users").update({ full_name: fullName }).eq("id", user.id);
+          await supabase.from("YADETO_users").update({ full_name: fullName }).eq("id", user.id);
           user.full_name = fullName;
         }
       }
@@ -249,7 +249,7 @@ Deno.serve(async (req: Request) => {
       }
       if (!password) return json({ error: "رمز عبور را وارد کنید" }, 400);
       const { data: user } = await supabase
-        .from("kateb_users")
+        .from("YADETO_users")
         .select("id, phone, full_name, is_admin, coins, password_hash")
         .eq("phone", phone)
         .maybeSingle();
@@ -282,7 +282,7 @@ Deno.serve(async (req: Request) => {
       const user = await getSessionUser(req);
       if (!user) return json({ error: "احراز هویت نشده" }, 401);
       const newCount = (user.ai_assistant_usage_this_month ?? 0) + 1;
-      const { error: e } = await supabase.from("kateb_users")
+      const { error: e } = await supabase.from("YADETO_users")
         .update({ ai_assistant_usage_this_month: newCount })
         .eq("id", user.id);
       if (e) return json({ error: e.message }, 500);
@@ -294,7 +294,7 @@ Deno.serve(async (req: Request) => {
       const user = await getSessionUser(req);
       if (!user) return json({ error: "احراز هویت نشده" }, 401);
       const newCount = (user.template_usage_this_month ?? 0) + 1;
-      const { error: e } = await supabase.from("kateb_users")
+      const { error: e } = await supabase.from("YADETO_users")
         .update({ template_usage_this_month: newCount })
         .eq("id", user.id);
       if (e) return json({ error: e.message }, 500);
@@ -321,7 +321,7 @@ Deno.serve(async (req: Request) => {
     // ─── Auth: signout ──────────────────────────────────────────
     if (action === "signout") {
       const token = getAuth(req);
-      if (token) await supabase.from("kateb_sessions").delete().eq("token", token);
+      if (token) await supabase.from("YADETO_sessions").delete().eq("token", token);
       return json({ success: true });
     }
 
@@ -332,7 +332,7 @@ Deno.serve(async (req: Request) => {
       const password = String(body.password ?? "");
       if (password.length < 4) return json({ error: "رمز عبور باید حداقل ۴ کاراکتر باشد" }, 400);
       const hash = await sha256(password);
-      const { error: e } = await supabase.from("kateb_users").update({ password_hash: hash }).eq("id", user.id);
+      const { error: e } = await supabase.from("YADETO_users").update({ password_hash: hash }).eq("id", user.id);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true });
     }
@@ -343,7 +343,7 @@ Deno.serve(async (req: Request) => {
       if (!user) return json({ error: "احراز هویت نشده" }, 401);
       const fullName = String(body.full_name ?? "").trim();
       if (!fullName) return json({ error: "نام نمی‌تواند خالی باشد" }, 400);
-      const { error: e } = await supabase.from("kateb_users").update({ full_name: fullName }).eq("id", user.id);
+      const { error: e } = await supabase.from("YADETO_users").update({ full_name: fullName }).eq("id", user.id);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true, user: { ...user, full_name: fullName } });
     }
@@ -450,10 +450,10 @@ Deno.serve(async (req: Request) => {
 
           if (orderType === "coin") {
             // Credit coins to the user
-            const { data: u } = await supabase.from("kateb_users")
+            const { data: u } = await supabase.from("YADETO_users")
               .select("coins").eq("id", updated.user_id).maybeSingle();
             const newCoins = (u?.coins ?? 0) + updated.coins;
-            await supabase.from("kateb_users")
+            await supabase.from("YADETO_users")
               .update({ coins: newCoins }).eq("id", updated.user_id);
             return json({
               success: true, status: "paid", order_id: order.id, type: "coin",
@@ -495,7 +495,7 @@ Deno.serve(async (req: Request) => {
             });
 
             // Update user's plan_type and reset usage counters
-            await supabase.from("kateb_users")
+            await supabase.from("YADETO_users")
               .update({
                 plan_type: planId,
                 ai_assistant_usage_this_month: 0,
@@ -625,10 +625,10 @@ Deno.serve(async (req: Request) => {
             return json({ error: "تأیید پرداخت ناموفق" }, 400);
           }
 
-          const { data: u } = await supabase.from("kateb_users")
+          const { data: u } = await supabase.from("YADETO_users")
             .select("coins").eq("id", updated.user_id).maybeSingle();
           const newCoins = (u?.coins ?? 0) + updated.coins;
-          await supabase.from("kateb_users").update({ coins: newCoins }).eq("id", updated.user_id);
+          await supabase.from("YADETO_users").update({ coins: newCoins }).eq("id", updated.user_id);
           return json({ success: true, coins: newCoins, ref_id: refId, added: updated.coins });
         }
 
@@ -730,19 +730,19 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "coins_balance") {
-      const { data: u } = await supabase.from("kateb_users").select("coins").eq("id", uid).maybeSingle();
+      const { data: u } = await supabase.from("YADETO_users").select("coins").eq("id", uid).maybeSingle();
       return json({ coins: u?.coins ?? 0 });
     }
     if (action === "coins_deduct") {
       const amount = Math.max(1, Number(body.amount ?? 0));
       const reason = String(body.reason ?? "");
-      const { data: u } = await supabase.from("kateb_users").select("coins").eq("id", uid).maybeSingle();
+      const { data: u } = await supabase.from("YADETO_users").select("coins").eq("id", uid).maybeSingle();
       const currentCoins = u?.coins ?? 0;
       if (currentCoins < amount) {
         return json({ error: "سکه کافی ندارید", coins: currentCoins }, 402);
       }
       const newCoins = currentCoins - amount;
-      const { error: e } = await supabase.from("kateb_users").update({ coins: newCoins }).eq("id", uid);
+      const { error: e } = await supabase.from("YADETO_users").update({ coins: newCoins }).eq("id", uid);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true, coins: newCoins, reason });
     }
@@ -770,7 +770,7 @@ Deno.serve(async (req: Request) => {
       };
       const pkg = packages[pkgId];
       if (!pkg) return json({ error: "بسته نامعتبر" }, 400);
-      const callbackUrl = "https://app.kateb.site/payment/callback";
+      const callbackUrl = "https://app.YADETO.site/payment/callback";
       const baseUrl = sandbox ? "https://sandbox.zarinpal.com/pg/v4/payment/request.json" : "https://payment.zarinpal.com/pg/v4/payment/request.json";
       const gatewayUrl = sandbox ? "https://sandbox.zarinpal.com/pg/StartPay/" : "https://payment.zarinpal.com/pg/StartPay/";
       try {
@@ -781,7 +781,7 @@ Deno.serve(async (req: Request) => {
             merchant_id: merchantId,
             amount: pkg.price,
             currency: "IRT",
-            description: `خرید ${pkg.coins} سکه - کاتب`,
+            description: `خرید ${pkg.coins} سکه - یادتو`,
             callback_url: callbackUrl,
           }),
         });
@@ -819,7 +819,7 @@ Deno.serve(async (req: Request) => {
       const s = await getSettings();
       const merchantId = s.zarinpal_merchant_id || "00000000-0000-0000-0000-000000000000";
       const sandbox = s.zarinpal_sandbox ?? true;
-      const callbackUrl = "https://app.kateb.site/payment/callback";
+      const callbackUrl = "https://app.YADETO.site/payment/callback";
       const baseUrl = sandbox ? "https://sandbox.zarinpal.com/pg/v4/payment/request.json" : "https://payment.zarinpal.com/pg/v4/payment/request.json";
       const gatewayUrl = sandbox ? "https://sandbox.zarinpal.com/pg/StartPay/" : "https://payment.zarinpal.com/pg/StartPay/";
 
@@ -831,7 +831,7 @@ Deno.serve(async (req: Request) => {
             merchant_id: merchantId,
             amount: price,
             currency: "IRT",
-            description: `خرید طرح ${planId} (${durationMonths} ماه) - کاتب`,
+            description: `خرید طرح ${planId} (${durationMonths} ماه) - یادتو`,
             callback_url: callbackUrl,
           }),
         });
@@ -869,7 +869,7 @@ Deno.serve(async (req: Request) => {
     if (!user.is_admin) return json({ error: "دسترسی غیرمجاز" }, 403);
 
     if (action === "admin_users_list") {
-      const { data } = await supabase.from("kateb_users")
+      const { data } = await supabase.from("YADETO_users")
         .select("id, phone, full_name, is_admin, coins, plan_type, created_at")
         .order("created_at", { ascending: false });
       return json({ data: data ?? [] });
@@ -878,7 +878,7 @@ Deno.serve(async (req: Request) => {
       const targetId = String(body.id ?? "");
       const newCoinVal = Math.max(0, Math.floor(Number(body.coins ?? 0)));
       if (!targetId) return json({ error: "کاربر نامعتبر" }, 400);
-      const { error: e } = await supabase.from("kateb_users").update({ coins: newCoinVal }).eq("id", targetId);
+      const { error: e } = await supabase.from("YADETO_users").update({ coins: newCoinVal }).eq("id", targetId);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true, coins: newCoinVal });
     }
@@ -886,9 +886,9 @@ Deno.serve(async (req: Request) => {
       const targetId = String(body.id ?? "");
       const addAmount = Math.floor(Number(body.amount ?? 0));
       if (!targetId || !addAmount) return json({ error: "مقادیر نامعتبر" }, 400);
-      const { data: target } = await supabase.from("kateb_users").select("coins").eq("id", targetId).maybeSingle();
+      const { data: target } = await supabase.from("YADETO_users").select("coins").eq("id", targetId).maybeSingle();
       const newCoinVal = (target?.coins ?? 0) + addAmount;
-      const { error: e } = await supabase.from("kateb_users").update({ coins: Math.max(0, newCoinVal) }).eq("id", targetId);
+      const { error: e } = await supabase.from("YADETO_users").update({ coins: Math.max(0, newCoinVal) }).eq("id", targetId);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true, coins: Math.max(0, newCoinVal) });
     }
@@ -901,14 +901,14 @@ Deno.serve(async (req: Request) => {
       if ("password" in patch && patch.password) {
         updateFields.password_hash = await sha256(String(patch.password));
       }
-      const { error: e } = await supabase.from("kateb_users").update(updateFields).eq("id", id);
+      const { error: e } = await supabase.from("YADETO_users").update(updateFields).eq("id", id);
       if (e) return json({ error: e.message }, 500);
       return json({ success: true });
     }
 
     if (action === "admin_user_delete") {
       const { id } = body;
-      await supabase.from("kateb_users").delete().eq("id", id);
+      await supabase.from("YADETO_users").delete().eq("id", id);
       return json({ success: true });
     }
 
@@ -923,7 +923,7 @@ Deno.serve(async (req: Request) => {
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Reset usage counters and set plan on user
-      const { error: ue } = await supabase.from("kateb_users").update({
+      const { error: ue } = await supabase.from("YADETO_users").update({
         plan_type: planId,
         ai_assistant_usage_this_month: 0,
         template_usage_this_month: 0,
@@ -978,7 +978,7 @@ Deno.serve(async (req: Request) => {
       if (password.length < 4) return json({ error: "رمز کوتاه" }, 400);
       const hash = await sha256(password);
       const newId = genUuid();
-      const { error: e } = await supabase.from("kateb_users").insert({
+      const { error: e } = await supabase.from("YADETO_users").insert({
         id: newId, phone, full_name: body.full_name ?? "",
         is_admin: body.is_admin ?? false, password_hash: hash,
       });
@@ -996,7 +996,7 @@ Deno.serve(async (req: Request) => {
       for (const f of ["sms_api_key", "sms_pattern_code", "sms_line_number", "ai_api_url", "ai_api_key", "ai_models", "zarinpal_merchant_id", "zarinpal_sandbox"]) {
         if (f in body) updateFields[f] = body[f];
       }
-      const { error: e } = await supabase.from("kateb_settings").update(updateFields).eq("id", 1);
+      const { error: e } = await supabase.from("YADETO_settings").update(updateFields).eq("id", 1);
       cachedSettings = null;
       if (e) return json({ error: e.message }, 500);
       return json({ success: true });
@@ -1004,7 +1004,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "admin_stats") {
       const [users, tasks, events] = await Promise.all([
-        supabase.from("kateb_users").select("id", { count: "exact", head: true }),
+        supabase.from("YADETO_users").select("id", { count: "exact", head: true }),
         supabase.from("calendar_tasks").select("id", { count: "exact", head: true }),
         supabase.from("calendar_events").select("id", { count: "exact", head: true }),
       ]);

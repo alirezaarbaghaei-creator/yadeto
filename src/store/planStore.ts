@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { getItem } from '@/lib/safeStorage';
 import { incrementAiUsageApi, incrementTemplateUsageApi, usageGetApi } from '@/lib/api';
 import { PLAN_MAP, type PlanId } from '@/data/plans';
@@ -51,7 +51,7 @@ interface PlanState {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const token = getItem('kateb_token') ?? '';
+  const token = getItem('YADETO_token') ?? '';
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

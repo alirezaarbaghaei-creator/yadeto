@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 
 /**
@@ -11,8 +11,8 @@ import { App as CapacitorApp } from '@capacitor/app';
  *     event fires.
  *
  * Supported deep-link paths:
- *   https://app.kateb.site/payment/result?order_id=...
- *   kateb://payment/result?order_id=...
+ *   https://app.YADETO.site/payment/result?order_id=...
+ *   YADETO://payment/result?order_id=...
  *
  * When a matching URL arrives, the callback is invoked with the full URL.
  */
@@ -56,7 +56,7 @@ export function useDeepLinks(onDeepLink: (url: string) => void) {
 
 /**
  * Parses a deep-link URL and returns the pathname + search params,
- * normalizing both https://app.kateb.site/... and kateb://... forms.
+ * normalizing both https://app.YADETO.site/... and YADETO://... forms.
  */
 export function parseDeepLink(url: string): { pathname: string; search: URLSearchParams } | null {
   try {

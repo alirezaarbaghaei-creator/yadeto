@@ -1,12 +1,12 @@
-/**
- * Kateb API client — calls a PHP JSON API endpoint.
+﻿/**
+ * YADETO API client — calls a PHP JSON API endpoint.
  * The base URL is configurable from the admin panel and stored in localStorage.
  */
 
 import { getItem, setItem, removeItem } from './safeStorage';
 
 const DEFAULT_API_URL = 'https://app.yadeto.site/api/index.php';
-const STORAGE_KEY = 'kateb_api_url';
+const STORAGE_KEY = 'YADETO_api_url';
 
 function getApiUrl(): string {
   return getItem(STORAGE_KEY) || DEFAULT_API_URL;
@@ -22,12 +22,12 @@ export function getStoredApiUrl(): string {
 }
 
 function getToken(): string | null {
-  return getItem('kateb_token');
+  return getItem('YADETO_token');
 }
 
 function setToken(token: string | null) {
-  if (token) setItem('kateb_token', token);
-  else removeItem('kateb_token');
+  if (token) setItem('YADETO_token', token);
+  else removeItem('YADETO_token');
 }
 
 export class OfflineError extends Error {

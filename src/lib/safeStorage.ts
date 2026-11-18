@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Safe localStorage wrapper — guards against Android WebView environments
  * where localStorage may be disabled or throw on access.
  */
 
 function isStorageAvailable(): boolean {
   try {
-    const test = '__kateb_test__';
+    const test = '__YADETO_test__';
     localStorage.setItem(test, test);
     localStorage.removeItem(test);
     return true;

@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+﻿import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -32,7 +32,7 @@ async function getAiSettings(): Promise<AiSettings> {
   if (cachedSettings && now - settingsCacheTime < SETTINGS_CACHE_TTL) return cachedSettings;
 
   const { data } = await supabase
-    .from("kateb_settings")
+    .from("YADETO_settings")
     .select("ai_api_url, ai_api_key, ai_models")
     .eq("id", 1)
     .maybeSingle();

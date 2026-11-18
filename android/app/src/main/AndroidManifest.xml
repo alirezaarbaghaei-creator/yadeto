@@ -22,36 +22,36 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Android App Link: https://app.kateb.site/payment/result -->
+            <!-- Android App Link: https://app.yadeto.site/payment/result -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="app.kateb.site" android:pathPrefix="/payment/result" />
+                <data android:scheme="https" android:host="app.yadeto.site" android:pathPrefix="/payment/result" />
             </intent-filter>
 
-            <!-- Android App Link: https://app.kateb.site/payment/callback -->
+            <!-- Android App Link: https://app.yadeto.site/payment/callback -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="app.kateb.site" android:pathPrefix="/payment/callback" />
+                <data android:scheme="https" android:host="app.yadeto.site" android:pathPrefix="/payment/callback" />
             </intent-filter>
 
-            <!-- Custom URL scheme fallback: kateb://payment/result -->
+            <!-- Custom URL scheme fallback: yadeto://payment/result -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="kateb" android:host="payment" android:pathPrefix="/result" />
+                <data android:scheme="yadeto" android:host="payment" android:pathPrefix="/result" />
             </intent-filter>
 
-            <!-- Custom URL scheme fallback: kateb://payment/callback -->
+            <!-- Custom URL scheme fallback: yadeto://payment/callback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="kateb" android:host="payment" android:pathPrefix="/callback" />
+                <data android:scheme="yadeto" android:host="payment" android:pathPrefix="/callback" />
             </intent-filter>
 
         </activity>

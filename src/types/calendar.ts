@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Types for the «مدیر من» (Life Manager) module — ported from the
- * life_manager Expo app into Kateb's web stack.
+ * life_manager Expo app into YADETO's web stack.
  */
 
 export type Priority = 'low' | 'medium' | 'high';
@@ -138,13 +138,21 @@ export type AIIntentType =
   | 'create_task'
   | 'create_event'
   | 'create_recurring_task'
+  | 'update_task'
+  | 'update_event'
   | 'complete_task'
   | 'reschedule_task'
+  | 'reschedule_event'
   | 'delete_task'
+  | 'delete_event'
   | 'find_free_time'
+  | 'auto_schedule_tasks'
+  | 'update_work_hours'
+  | 'batch_actions'
   | 'summarize_day'
   | 'summarize_week'
   | 'show_today'
+  | 'show_day'
   | 'show_upcoming'
   | 'create_reminder';
 

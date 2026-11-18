@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 --  Smart Calendar (تقویم هوشمند) — MySQL Database Schema (Complete)
 --  Run this once in phpMyAdmin or MySQL CLI to create all tables.
 --  After running, the PHP API will auto-seed default settings
@@ -6,7 +6,7 @@
 -- ============================================================
 
 -- 1. Users
-CREATE TABLE IF NOT EXISTS kateb_users (
+CREATE TABLE IF NOT EXISTS YADETO_users (
     id CHAR(36) PRIMARY KEY,
     phone VARCHAR(20) UNIQUE NOT NULL,
     full_name TEXT DEFAULT '',
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS kateb_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2. OTP Codes
-CREATE TABLE IF NOT EXISTS kateb_otp_codes (
+CREATE TABLE IF NOT EXISTS YADETO_otp_codes (
     id CHAR(36) PRIMARY KEY,
     phone VARCHAR(20) NOT NULL,
     code VARCHAR(6) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS kateb_otp_codes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3. Sessions
-CREATE TABLE IF NOT EXISTS kateb_sessions (
+CREATE TABLE IF NOT EXISTS YADETO_sessions (
     token VARCHAR(64) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
     phone VARCHAR(20) NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS kateb_sessions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 4. Settings (single-row table — all non-DB secrets stored here)
-CREATE TABLE IF NOT EXISTS kateb_settings (
+CREATE TABLE IF NOT EXISTS YADETO_settings (
     id INT PRIMARY KEY DEFAULT 1,
     sms_api_key TEXT DEFAULT '',
     sms_pattern_code TEXT DEFAULT '',
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS plan_orders (
 -- ============================================================
 --  Default settings row (edit these values after importing)
 -- ============================================================
-INSERT INTO kateb_settings (id, sms_api_key, sms_pattern_code, sms_line_number, ai_api_url, ai_api_key, ai_models, zarinpal_merchant_id, zarinpal_sandbox)
+INSERT INTO YADETO_settings (id, sms_api_key, sms_pattern_code, sms_line_number, ai_api_url, ai_api_key, ai_models, zarinpal_merchant_id, zarinpal_sandbox)
 VALUES (1, '', '', '', 'https://ai.parspack.com/v1', '', 'qwen/qwen3-32b', '00000000-0000-0000-0000-000000000000', 1)
 ON DUPLICATE KEY UPDATE id = id;
 
@@ -165,6 +165,6 @@ ON DUPLICATE KEY UPDATE id = id;
 --  Default admin user (phone: 09120000000, password: admin123)
 --  Password hash is SHA-256 of 'admin123'
 -- ============================================================
-INSERT INTO kateb_users (id, phone, full_name, is_admin, password_hash, coins)
+INSERT INTO YADETO_users (id, phone, full_name, is_admin, password_hash, coins)
 VALUES ('a0000000-0000-0000-0000-000000000001', '09120000000', 'مدیر سیستم', 1, '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 100)
 ON DUPLICATE KEY UPDATE is_admin = 1;

@@ -28,42 +28,47 @@ export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardP
   const priority = PRIORITY_STYLES[task.priority];
 
   return (
-    <div className="card-base flex items-center gap-3 rounded-2xl p-3">
+    <div className="card-base group flex items-center gap-3 rounded-2xl p-3.5 transition-all hover:shadow-card-hover hover:border-slate-300/70">
       <button
         onClick={() => onToggle(task)}
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-all ${
           isCompleted
-            ? 'border-green-500 bg-green-500 text-white'
-            : 'border-slate-300 hover:border-primary-400'
+            ? 'border-success-500 bg-success-500 text-white shadow-sm shadow-success-500/20'
+            : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50/50'
         }`}
         aria-label={isCompleted ? 'انجام نشده' : 'انجام شد'}
       >
         {isCompleted && <Check className="h-4 w-4" strokeWidth={3} />}
       </button>
 
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1.5">
         <p
-          className={`truncate text-right text-sm font-medium ${
-            isCompleted ? 'text-slate-400 line-through' : 'text-slate-700'
+          className={`truncate text-right text-sm font-semibold ${
+            isCompleted ? 'text-slate-400 line-through' : 'text-slate-800'
           }`}
         >
           {task.title}
         </p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-start gap-2">
           {task.dueTime && (
-            <span className="flex items-center gap-1 text-[11px] text-slate-400">
-              <Clock className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              <Clock className="h-3 w-3 text-slate-400" />
               {toFaDigits(task.dueTime)}
             </span>
           )}
+          {task.duration && (
+            <span className="text-[11px] text-slate-400">
+              {toFaDigits(task.duration)} دقیقه
+            </span>
+          )}
           <span
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${priority.chip}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${priority.chip}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${priority.dot}`} />
             {priority.label}
           </span>
           {task.recurrence !== 'none' && (
-            <span className="flex items-center gap-1 text-[10px] text-accent-600">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-medium text-accent-700">
               <Repeat className="h-3 w-3" />
               {RECURRENCE_LABELS[task.recurrence]}
             </span>

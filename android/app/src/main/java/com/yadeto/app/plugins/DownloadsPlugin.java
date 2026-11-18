@@ -1,4 +1,4 @@
-package com.kateb.app.plugins;
+package com.yadeto.app.plugins;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -77,7 +77,7 @@ import java.util.Locale;
 )
 public class DownloadsPlugin extends Plugin {
 
-    private static final String TAG = "KatebDownloads";
+    private static final String TAG = "yadetoDownloads";
     private static final String DEFAULT_MIME = "application/pdf";
 
     /**

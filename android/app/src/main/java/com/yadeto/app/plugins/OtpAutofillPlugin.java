@@ -1,4 +1,4 @@
-package com.kateb.app.plugins;
+package com.yadeto.app.plugins;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -38,7 +38,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "SmsAutofill")
 public class OtpAutofillPlugin extends Plugin {
 
-    private static final String TAG = "KatebSmsAutofill";
+    private static final String TAG = "yadetoSmsAutofill";
 
     /** Event name the JS side subscribes to with addListener('code', ...). */
     private static final String EVENT_CODE = "code";

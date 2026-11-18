@@ -1,4 +1,4 @@
-/*
+﻿/*
 # Add Dual Usage Counters for Subscription System
 
 ## Overview
@@ -11,7 +11,7 @@ so counters can be automatically reset at the beginning of each new cycle.
 
 ## Modified Tables
 
-### `kateb_users`
+### `YADETO_users`
 - Added `ai_assistant_usage_this_month` (integer, default 0)
 - Added `template_usage_this_month` (integer, default 0)
 - Added `usage_cycle_start` (timestamptz, default now()) — start of current billing cycle
@@ -27,17 +27,17 @@ so counters can be automatically reset at the beginning of each new cycle.
 - RLS already enabled on both tables. No new policies needed; existing ownership policies apply.
 */
 
--- ─── Add usage columns to kateb_users ──────────────────────────
+-- ─── Add usage columns to YADETO_users ──────────────────────────
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'kateb_users' AND column_name = 'ai_assistant_usage_this_month') THEN
-    ALTER TABLE kateb_users ADD COLUMN ai_assistant_usage_this_month integer NOT NULL DEFAULT 0;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'YADETO_users' AND column_name = 'ai_assistant_usage_this_month') THEN
+    ALTER TABLE YADETO_users ADD COLUMN ai_assistant_usage_this_month integer NOT NULL DEFAULT 0;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'kateb_users' AND column_name = 'template_usage_this_month') THEN
-    ALTER TABLE kateb_users ADD COLUMN template_usage_this_month integer NOT NULL DEFAULT 0;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'YADETO_users' AND column_name = 'template_usage_this_month') THEN
+    ALTER TABLE YADETO_users ADD COLUMN template_usage_this_month integer NOT NULL DEFAULT 0;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'kateb_users' AND column_name = 'usage_cycle_start') THEN
-    ALTER TABLE kateb_users ADD COLUMN usage_cycle_start timestamptz DEFAULT now();
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'YADETO_users' AND column_name = 'usage_cycle_start') THEN
+    ALTER TABLE YADETO_users ADD COLUMN usage_cycle_start timestamptz DEFAULT now();
   END IF;
 END $$;
 

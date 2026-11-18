@@ -1,4 +1,4 @@
-package com.kateb.app.plugins;
+package com.yadeto.app.plugins;
 
 import android.app.Notification;
 import android.os.Bundle;
@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
  */
 public class OtpNotificationListener extends NotificationListenerService {
 
-    private static final String TAG = "KatebSmsAutofill";
+    private static final String TAG = "yadetoSmsAutofill";
 
     /**
      * A run of 4-6 digits not glued to other digits.

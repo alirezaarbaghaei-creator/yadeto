@@ -1,20 +1,48 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Check, X, CalendarClock, MapPin, Mic, Brain, Zap } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import {
+  Send,
+  Sparkles,
+  Check,
+  X,
+  CalendarClock,
+  MapPin,
+  Brain,
+  Zap,
+  RotateCcw,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
+  Clock,
+  CalendarDays,
+  ListTodo,
+  Coffee,
+  Repeat,
+  Tag,
+} from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
 import { usePlanStore } from '@/store/planStore';
 import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 import { getItem as getStoredItem, setItem as setStoredItem } from '@/lib/safeStorage';
 import { callLLM, isLLMError, type ClarifyData } from '@/services/calendar/calendarLlm';
 import { calendarAi } from '@/services/calendar/calendarAi';
-import { findFreeSlots, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
+import {
+  findFreeSlots,
+  getVisibleTasksForDate,
+  getTodaySchedule,
+  formatFreeTime,
+} from '@/services/calendar/schedulingEngine';
 import { scheduleTaskReminder } from '@/services/calendar/notifications';
-import type { AIIntent, UserPreferences } from '@/types/calendar';
+import type { AIIntent, Priority, RecurrenceType, TaskCategory } from '@/types/calendar';
 import {
   getTodayJalali,
   formatJalali,
   getTodayISO,
   toFaDigits,
   parseJalali,
+  dateToJalali,
   toGregorian,
   gregorianToISO,
   getStartOfWeek,
@@ -28,6 +56,7 @@ interface ChatMessage {
   intentData?: Record<string, unknown> | null;
   actions?: { label: string; type: 'confirm' | 'cancel' }[];
   clarify?: ClarifyData | null;
+  offlineFallback?: boolean;
 }
 
 let messageCounter = Date.now();
@@ -35,7 +64,9 @@ const nextId = () => `msg-${messageCounter++}`;
 
 const CHAT_KEY = 'assistant_chat_v1';
 
-interface StoredChat { messages: ChatMessage[] }
+interface StoredChat {
+  messages: ChatMessage[];
+}
 
 function loadStoredMessages(): ChatMessage[] {
   try {
@@ -64,19 +95,101 @@ function intentDateToISO(dateStr: string): string | null {
   return gregorianToISO(toGregorian(parsed.year, parsed.month, parsed.day));
 }
 
+function formatISOToJalaliLong(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) {
+    const parsed = parseJalali(iso);
+    return parsed ? formatJalali(parsed, 'long') : iso;
+  }
+  return formatJalali(dateToJalali(new Date(iso.slice(0, 10) + 'T00:00:00')), 'long');
+}
+
+const CATEGORY_COLORS: Record<TaskCategory, string> = {
+  work: '#3157D5',
+  personal: '#13A89E',
+  health: '#22C55E',
+  finance: '#F59E0B',
+  education: '#8B5CF6',
+  social: '#EC4899',
+  other: '#64748B',
+};
+
+const CATEGORY_LABELS: Record<TaskCategory, string> = {
+  work: 'کاری',
+  personal: 'شخصی',
+  health: 'سلامت',
+  finance: 'مالی',
+  education: 'آموزش',
+  social: 'اجتماعی',
+  other: 'سایر',
+};
+
+const PRIORITY_LABELS: Record<Priority, string> = {
+  high: 'مهم',
+  medium: 'متوسط',
+  low: 'کم',
+};
+
+const RECURRENCE_LABELS: Record<string, string> = {
+  daily: 'روزانه',
+  weekly: 'هفتگی',
+  monthly: 'ماهانه',
+  yearly: 'سالانه',
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  create_task: 'کار جدید',
+  create_recurring_task: 'کار تکرارشونده',
+  create_event: 'رویداد جدید',
+  reschedule_task: 'جابه‌جایی کار',
+  reschedule_event: 'جابه‌جایی رویداد',
+  delete_task: 'حذف کار',
+  delete_event: 'حذف رویداد',
+};
+
 function buildGreeting(): string {
-  return `سلام! من «یادتو» هستم — مدیر برنامه شخصی تو
+  return `سلام! من «یادتو» هستم — مدیر برنامه هوشمند تو.
 
-این کارها رو برات انجام می‌دم:
-• ثبت کار و رویداد فقط با یک جمله («فردا ساعت ۱۰ جلسه دارم» یا «یادم بنداز پنجشنبه قبض رو بپردازم»)
-• برنامه امروز یا هر روز دلخواه، دقیق و مرتب بر اساس ساعت
+می‌تونی بنویسی یا با میکروفون صحبت کنی تا برات انجام بدم:
+• ثبت کار و رویداد با اولویت، مکان و یادآوری («فردا ساعت ۱۰ جلسه با تیم فنی دارم»)
+• اولویت‌بندی کارها و چیدمان برنامه امروز بر اساس ساعت‌های خالی
+• تشخیص تداخل زمانی قبل از ثبت رویدادها
 • کارهای تکرارشونده (قسط ماهانه، کلاس هفتگی، ورزش روزانه)
-• پیدا کردن زمان آزاد و پیشنهاد بهترین وقت برای کارهای جدید
-• جستجوی وب برای اطلاعات زنده (مثل بازی بعدی پرسپولیس!) و ثبتش به‌عنوان رویداد
-• هشدار تداخل زمانی و پیشنهاد جابه‌جایی
-• پیشنهاد بهترین تاریخ برای مسافرت بر اساس تعطیلات و برنامه‌ات
+• پیدا کردن زمان آزاد و پیشنهاد بهترین تاریخ برای سفر
 
-از یکی از پیشنهادهای زیر شروع کن یا هرچی تو ذهنت هست بگو.`;
+از نوار وضعیت بالا یا پیشنهادهای زیر شروع کن، یا هرچی تو ذهنت هست بگو.`;
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: { transcript: string };
+    };
+  };
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionCtor;
+    webkitSpeechRecognition?: SpeechRecognitionCtor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 export function AssistantPage() {
@@ -90,12 +203,15 @@ export function AssistantPage() {
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
   const updateTask = useCalendarStore((s) => s.updateTask);
+  const updateEvent = useCalendarStore((s) => s.updateEvent);
+  const updatePreferences = useCalendarStore((s) => s.updatePreferences);
   const user = useAuthStore((s) => s.user);
   const canUseAiAssistant = usePlanStore((s) => s.canUseAiAssistant);
   const incrementAiAssistant = usePlanStore((s) => s.incrementAiAssistant);
   const canUseTemplate = usePlanStore((s) => s.canUseTemplate);
   const incrementTemplate = usePlanStore((s) => s.incrementTemplate);
   const openUpgradeModal = usePlanStore((s) => s.openUpgradeModal);
+  const consumePendingAiPrompt = useAppStore((s) => s.consumePendingAiPrompt);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const stored = loadStoredMessages();
@@ -104,11 +220,77 @@ export function AssistantPage() {
   });
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceReplyRef = useRef(false);
+
+  // Live Program Manager Snapshot
+  const todayISO = getTodayISO();
+  const visibleToday = useMemo(() => getVisibleTasksForDate(tasks, todayISO), [tasks, todayISO]);
+  const todayPendingCount = useMemo(
+    () => visibleToday.filter((t) => t.status === 'pending').length,
+    [visibleToday],
+  );
+  const todayEventsCount = useMemo(
+    () => events.filter((e) => e.date === todayISO).length,
+    [events, todayISO],
+  );
+  const overdueCount = useMemo(
+    () => tasks.filter((t) => t.status === 'pending' && t.dueDate < todayISO).length,
+    [tasks, todayISO],
+  );
+  const todaySchedule = useMemo(
+    () =>
+      getTodaySchedule(
+        events,
+        visibleToday,
+        preferences?.workStart ?? '08:00',
+        preferences?.workEnd ?? '20:00',
+      ),
+    [events, visibleToday, preferences],
+  );
+
+  useEffect(() => {
+    voiceReplyRef.current = voiceReplyEnabled;
+  }, [voiceReplyEnabled]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, thinking]);
+
+  const speakText = useCallback((text: string) => {
+    if (!voiceReplyRef.current || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.replace(/[•*#✓]/g, ' '));
+      utterance.lang = 'fa-IR';
+      utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      /* ignore TTS errors on unsupported devices */
+    }
+  }, []);
+
+  const lastSpokenIdRef = useRef<string | null>(messages[messages.length - 1]?.id ?? null);
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last && last.role === 'assistant' && last.id !== lastSpokenIdRef.current) {
+      lastSpokenIdRef.current = last.id;
+      speakText(last.content);
+    }
+  }, [messages, speakText]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const pushMessage = useCallback((m: Omit<ChatMessage, 'id'>) => {
     setMessages((prev) => {
@@ -119,8 +301,49 @@ export function AssistantPage() {
   }, []);
 
   const clearActions = useCallback(() => {
-    setMessages((prev) => prev.map((m) => (m.actions?.length ? { ...m, actions: [] } : m)));
+    setMessages((prev) => {
+      const next = prev.map((m) => (m.actions?.length ? { ...m, actions: [] } : m));
+      saveMessages(next);
+      return next;
+    });
   }, []);
+
+  const detectConflict = useCallback(
+    (isoDate: string, timeStr?: string): string | null => {
+      if (!isoDate || !timeStr) return null;
+      const [h, m] = timeStr.split(':').map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      const targetMin = h * 60 + m;
+
+      for (const e of events) {
+        if (e.date !== isoDate) continue;
+        const [eh, em] = e.startTime.split(':').map(Number);
+        const start = eh * 60 + em;
+        const end = e.endTime
+          ? (() => {
+              const [xh, xm] = e.endTime.split(':').map(Number);
+              return xh * 60 + xm;
+            })()
+          : start + 60;
+        if (targetMin >= start && targetMin < end) {
+          return `تداخل با رویداد «${e.title}» (${toFaDigits(e.startTime)})`;
+        }
+      }
+
+      for (const t of tasks) {
+        if (t.dueDate !== isoDate || t.status !== 'pending' || !t.dueTime) continue;
+        const [th, tm] = t.dueTime.split(':').map(Number);
+        const start = th * 60 + tm;
+        const end = start + (t.duration || 60);
+        if (targetMin >= start && targetMin < end) {
+          return `تداخل با کار «${t.title}» (${toFaDigits(t.dueTime)})`;
+        }
+      }
+
+      return null;
+    },
+    [events, tasks],
+  );
 
   const handleConfirm = useCallback(
     async (intentData: Record<string, unknown>) => {
@@ -145,24 +368,44 @@ export function AssistantPage() {
           pushMessage({ role: 'assistant', content: 'تاریخ رو نتونستم بفهمم. لطفاً دوباره بگو.' });
           return;
         }
+        const time = (intentData.time as string) || (intentData.startTime as string) || undefined;
+        const priority = (['low', 'medium', 'high'].includes(intentData.priority as string)
+          ? intentData.priority
+          : 'medium') as Priority;
+        const category = (['work', 'personal', 'health', 'finance', 'education', 'social', 'other'].includes(
+          intentData.category as string,
+        )
+          ? intentData.category
+          : 'personal') as TaskCategory;
+        const recurrence = (['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(
+          intentData.recurrence as string,
+        )
+          ? intentData.recurrence
+          : 'none') as RecurrenceType;
+        const reminder = typeof intentData.reminder === 'number' ? intentData.reminder : preferences?.defaultReminder ?? 15;
+        const dayOfMonth = typeof intentData.day_of_month === 'number' ? intentData.day_of_month : undefined;
+
         const task = addTask({
           title,
           dueDate: iso,
-          dueTime: (intentData.time as string) || undefined,
-          priority: 'medium',
-          category: 'personal',
+          dueTime: time,
+          duration: typeof intentData.duration === 'number' ? intentData.duration : undefined,
+          priority,
+          category,
           status: 'pending',
-          recurrence: (intentData.recurrence as 'daily' | 'weekly' | 'monthly' | 'yearly') || 'none',
+          recurrence,
+          dayOfMonth,
+          reminder,
         });
         if (task && task.dueTime) {
-          await scheduleTaskReminder(task.title, task.dueDate, task.dueTime, preferences?.defaultReminder ?? 15);
+          await scheduleTaskReminder(task.title, task.dueDate, task.dueTime, reminder);
         }
         void incrementTemplate(user?.id ?? 'local');
         pushMessage({
           role: 'assistant',
-          content: `✓ کار «${title}» برای ${formatJalali(parseJalali(dateStr) ?? getTodayJalali(), 'long')}${
-            intentData.time ? ` ساعت ${toFaDigits(intentData.time as string)}` : ''
-          } ثبت شد.${task.dueTime ? ` ${toFaDigits(preferences?.defaultReminder ?? 15)} دقیقه قبل یادآوری می‌کنم.` : ''}`,
+          content: `✓ کار «${title}» برای ${formatISOToJalaliLong(iso)}${
+            time ? ` ساعت ${toFaDigits(time)}` : ''
+          } ثبت شد.${task.dueTime ? ` ${toFaDigits(reminder)} دقیقه قبل یادآوری می‌کنم.` : ''}`,
         });
         return;
       }
@@ -175,22 +418,51 @@ export function AssistantPage() {
           pushMessage({ role: 'assistant', content: 'تاریخ رو نتونستم بفهمم. لطفاً دوباره بگو.' });
           return;
         }
-        const time = (intentData.time as string) || '10:00';
-        const event = addEvent({ title, date: iso, startTime: time, color: '#4338ca', category: 'work' });
+        const startTime = (intentData.startTime as string) || (intentData.time as string) || '10:00';
+        const endTime = (intentData.endTime as string) || undefined;
+        const location = (intentData.location as string) || undefined;
+        const category = (['work', 'personal', 'health', 'finance', 'education', 'social', 'other'].includes(
+          intentData.category as string,
+        )
+          ? intentData.category
+          : 'work') as TaskCategory;
+        const recurrence = (['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(
+          intentData.recurrence as string,
+        )
+          ? intentData.recurrence
+          : 'none') as RecurrenceType;
+        const reminder = typeof intentData.reminder === 'number' ? intentData.reminder : preferences?.defaultReminder ?? 15;
+
+        const event = addEvent({
+          title,
+          date: iso,
+          startTime,
+          endTime,
+          location,
+          category,
+          color: CATEGORY_COLORS[category] || '#4338ca',
+          reminder,
+          recurrence,
+        });
         if (event) {
-          await scheduleTaskReminder(event.title, event.date, event.startTime, preferences?.defaultReminder ?? 15);
+          await scheduleTaskReminder(event.title, event.date, event.startTime, reminder);
         }
         void incrementTemplate(user?.id ?? 'local');
         pushMessage({
           role: 'assistant',
-          content: `✓ رویداد «${title}» برای ${formatJalali(parseJalali(dateStr) ?? getTodayJalali(), 'long')} ساعت ${toFaDigits(time)} ثبت شد.`,
+          content: `✓ رویداد «${title}» برای ${formatISOToJalaliLong(iso)} ساعت ${toFaDigits(startTime)}${
+            location ? ` در ${location}` : ''
+          } ثبت شد.`,
         });
         return;
       }
 
       if (action === 'delete_task') {
         const id = (intentData.id as string) || '';
-        const target = tasks.find((t) => t.id === id || t.title === (intentData.title as string));
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = tasks.find(
+          (t) => t.id === id || (titleQ && t.title.includes(titleQ)),
+        );
         if (!target) {
           pushMessage({ role: 'assistant', content: 'کار مورد نظر رو پیدا نکردم. عنوان دقیق‌تر بگو.' });
           return;
@@ -202,7 +474,10 @@ export function AssistantPage() {
 
       if (action === 'delete_event') {
         const id = (intentData.id as string) || '';
-        const target = events.find((e) => e.id === id || e.title === (intentData.title as string));
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = events.find(
+          (e) => e.id === id || (titleQ && e.title.includes(titleQ)),
+        );
         if (!target) {
           pushMessage({ role: 'assistant', content: 'رویداد مورد نظر رو پیدا نکردم. عنوان دقیق‌تر بگو.' });
           return;
@@ -214,7 +489,10 @@ export function AssistantPage() {
 
       if (action === 'reschedule_task') {
         const id = (intentData.id as string) || '';
-        const target = tasks.find((t) => t.id === id || t.title === (intentData.title as string));
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = tasks.find(
+          (t) => t.id === id || (titleQ && t.title.includes(titleQ)),
+        );
         if (!target) {
           pushMessage({ role: 'assistant', content: 'کار مورد نظر رو پیدا نکردم.' });
           return;
@@ -225,52 +503,312 @@ export function AssistantPage() {
           pushMessage({ role: 'assistant', content: 'تاریخ جدید رو نتونستم بفهمم.' });
           return;
         }
-        updateTask(target.id, {
-          dueDate: iso,
-          dueTime: (intentData.time as string) || target.dueTime,
-        });
-        const d = parseJalali(iso.replace(/-/g, '/'));
+        const newTime = (intentData.time as string) || (intentData.startTime as string) || target.dueTime;
+        updateTask(target.id, { dueDate: iso, dueTime: newTime });
         pushMessage({
           role: 'assistant',
-          content: `✓ «${target.title}» به ${d ? formatJalali(d, 'long') : iso}${intentData.time ? ` ساعت ${toFaDigits(intentData.time as string)}` : ''} منتقل شد.`,
+          content: `✓ «${target.title}» به ${formatISOToJalaliLong(iso)}${newTime ? ` ساعت ${toFaDigits(newTime)}` : ''} منتقل شد.`,
         });
+        return;
+      }
+
+      if (action === 'reschedule_event' || action === 'update_event') {
+        const id = (intentData.id as string) || '';
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = events.find(
+          (e) => e.id === id || (titleQ && e.title.includes(titleQ)),
+        );
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'رویداد مورد نظر رو پیدا نکردم.' });
+          return;
+        }
+        const updates: Partial<typeof target> = {};
+        if (typeof intentData.title_new === 'string' && intentData.title_new.trim()) {
+          updates.title = intentData.title_new.trim();
+        }
+        if (typeof intentData.description === 'string') {
+          updates.description = intentData.description;
+        }
+        if (typeof intentData.date === 'string') {
+          const iso = intentDateToISO(intentData.date);
+          if (!iso) {
+            pushMessage({ role: 'assistant', content: 'تاریخ جدید رو نتونستم بفهمم.' });
+            return;
+          }
+          updates.date = iso;
+        }
+        if (typeof intentData.startTime === 'string' || typeof intentData.time === 'string') {
+          updates.startTime = (intentData.startTime as string) || (intentData.time as string);
+        }
+        if (typeof intentData.endTime === 'string') updates.endTime = intentData.endTime;
+        if (typeof intentData.location === 'string') updates.location = intentData.location;
+        if (typeof intentData.color === 'string') updates.color = intentData.color;
+        if (
+          ['work', 'personal', 'health', 'finance', 'education', 'social', 'other'].includes(
+            intentData.category as string,
+          )
+        ) {
+          updates.category = intentData.category as TaskCategory;
+          if (!updates.color) updates.color = CATEGORY_COLORS[updates.category];
+        }
+        if (typeof intentData.reminder === 'number') updates.reminder = intentData.reminder;
+        if (
+          ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(intentData.recurrence as string)
+        ) {
+          updates.recurrence = intentData.recurrence as RecurrenceType;
+        }
+
+        updateEvent(target.id, updates);
+        const finalDate = updates.date || target.date;
+        const finalTime = updates.startTime || target.startTime;
+        if (updates.reminder !== -1) {
+          await scheduleTaskReminder(
+            updates.title || target.title,
+            finalDate,
+            finalTime,
+            updates.reminder ?? target.reminder ?? preferences?.defaultReminder ?? 15,
+          );
+        }
+        pushMessage({
+          role: 'assistant',
+          content: `✓ رویداد «${updates.title || target.title}» (${formatISOToJalaliLong(finalDate)} ساعت ${toFaDigits(finalTime)}) به‌روزرسانی شد.`,
+        });
+        return;
+      }
+
+      if (action === 'update_task') {
+        const id = (intentData.id as string) || '';
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target =
+          tasks.find((t) => t.id === id || (titleQ && t.title.includes(titleQ))) ??
+          (titleQ ? undefined : tasks.find((t) => t.status === 'pending'));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'کار مورد نظر رو پیدا نکردم. عنوان دقیق‌تر بگو.' });
+          return;
+        }
+        const updates: Partial<typeof target> = {};
+        if (typeof intentData.title_new === 'string' && intentData.title_new.trim()) {
+          updates.title = intentData.title_new.trim();
+        }
+        if (typeof intentData.description === 'string') {
+          updates.description = intentData.description;
+        }
+        if (typeof intentData.date === 'string') {
+          const iso = intentDateToISO(intentData.date);
+          if (iso) updates.dueDate = iso;
+        }
+        if (typeof intentData.time === 'string') updates.dueTime = intentData.time;
+        if (typeof intentData.duration === 'number') updates.duration = intentData.duration;
+        if (['low', 'medium', 'high'].includes(intentData.priority as string)) {
+          updates.priority = intentData.priority as Priority;
+        }
+        if (
+          ['work', 'personal', 'health', 'finance', 'education', 'social', 'other'].includes(
+            intentData.category as string,
+          )
+        ) {
+          updates.category = intentData.category as TaskCategory;
+        }
+        if (typeof intentData.reminder === 'number') updates.reminder = intentData.reminder;
+        if (
+          ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(intentData.recurrence as string)
+        ) {
+          updates.recurrence = intentData.recurrence as RecurrenceType;
+        }
+
+        updateTask(target.id, updates);
+        const finalDate = updates.dueDate || target.dueDate;
+        const finalTime = updates.dueTime ?? target.dueTime;
+        if (finalTime && updates.reminder !== -1) {
+          await scheduleTaskReminder(
+            updates.title || target.title,
+            finalDate,
+            finalTime,
+            updates.reminder ?? target.reminder ?? preferences?.defaultReminder ?? 15,
+          );
+        }
+
+        const changes: string[] = [];
+        if (updates.priority) changes.push(`اولویت: ${PRIORITY_LABELS[updates.priority]}`);
+        if (updates.category) changes.push(`دسته: ${CATEGORY_LABELS[updates.category]}`);
+        if (updates.dueTime) changes.push(`ساعت: ${toFaDigits(updates.dueTime)}`);
+        if (updates.reminder !== undefined) {
+          changes.push(
+            updates.reminder < 0
+              ? 'بدون یادآوری'
+              : `یادآوری: ${toFaDigits(String(updates.reminder))} دقیقه قبل`,
+          );
+        }
+        pushMessage({
+          role: 'assistant',
+          content: `✓ کار «${updates.title || target.title}» به‌روزرسانی شد${
+            changes.length ? ` (${changes.join(' • ')})` : ''
+          }.`,
+        });
+        return;
+      }
+
+      if (action === 'complete_task') {
+        const id = (intentData.id as string) || '';
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target =
+          tasks.find((t) => t.status === 'pending' && (t.id === id || (titleQ && t.title.includes(titleQ)))) ??
+          tasks.find((t) => t.status === 'pending' && (t.dueDate === todayISO || t.dueDate < todayISO));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'کار در جریانی برای علامت‌زدن پیدا نکردم.' });
+          return;
+        }
+        toggleTask(target.id);
+        pushMessage({ role: 'assistant', content: `✓ «${target.title}» به‌عنوان انجام‌شده علامت خورد.` });
+        return;
+      }
+
+      if (action === 'update_work_hours') {
+        const workStart = (intentData.workStart as string) || preferences?.workStart || '08:00';
+        const workEnd = (intentData.workEnd as string) || preferences?.workEnd || '20:00';
+        const defaultReminder =
+          typeof intentData.defaultReminder === 'number'
+            ? intentData.defaultReminder
+            : preferences?.defaultReminder ?? 15;
+        updatePreferences({ workStart, workEnd, defaultReminder });
+        pushMessage({
+          role: 'assistant',
+          content: `✓ ساعات کاری شما از ${toFaDigits(workStart)} تا ${toFaDigits(workEnd)} (با یادآوری ${toFaDigits(String(defaultReminder))} دقیقه قبل) تنظیم شد.`,
+        });
+        return;
+      }
+
+      if (action === 'auto_schedule_tasks') {
+        const targetISO =
+          typeof intentData.date === 'string' ? intentDateToISO(intentData.date) ?? todayISO : todayISO;
+        const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+        const unscheduled = tasks
+          .filter((t) => t.status === 'pending' && !t.dueTime && t.dueDate <= targetISO)
+          .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+        if (unscheduled.length === 0) {
+          pushMessage({
+            role: 'assistant',
+            content: 'همه کارهای امروز و عقب‌افتاده‌ها یا ساعت مشخص دارن یا انجام شدن!',
+          });
+          return;
+        }
+
+        const freeResult = findFreeSlots({
+          events,
+          tasks,
+          holidays,
+          workStart: preferences?.workStart ?? '08:00',
+          workEnd: preferences?.workEnd ?? '20:00',
+          workDays: preferences?.workDays ?? [6, 0, 1, 2, 3],
+          durationMinutes: 45,
+          daysAhead: 2,
+        });
+
+        if (freeResult.slots.length === 0) {
+          pushMessage({
+            role: 'assistant',
+            content: 'متأسفانه در دو روز آینده بازه خالی کافی پیدا نشد. می‌تونی ساعات کاریت رو تغییر بدی.',
+          });
+          return;
+        }
+
+        const scheduledLines: string[] = [];
+        let slotIdx = 0;
+        for (const t of unscheduled) {
+          if (slotIdx >= freeResult.slots.length) break;
+          const slot = freeResult.slots[slotIdx++];
+          updateTask(t.id, { dueDate: slot.date, dueTime: slot.startTime });
+          await scheduleTaskReminder(t.title, slot.date, slot.startTime, preferences?.defaultReminder ?? 15);
+          scheduledLines.push(
+            `• ${t.title} ← ${formatISOToJalaliLong(slot.date)} ساعت ${toFaDigits(slot.startTime)}`,
+          );
+        }
+
+        pushMessage({
+          role: 'assistant',
+          content: `✓ ${toFaDigits(String(scheduledLines.length))} کار به‌صورت خودکار در وقت‌های آزاد زمان‌بندی شد:\n\n${scheduledLines.join('\n')}`,
+        });
+        return;
+      }
+
+      if (action === 'batch_actions' && Array.isArray(intentData.items)) {
+        for (const item of intentData.items as Record<string, unknown>[]) {
+          await handleConfirm(item);
+        }
         return;
       }
 
       pushMessage({ role: 'assistant', content: 'این عملیات هنوز پشتیبانی نمی‌شود.' });
     },
-    [addTask, addEvent, toggleTask, deleteTask, deleteEvent, updateTask, tasks, events, preferences, pushMessage, canUseTemplate, incrementTemplate, openUpgradeModal, user],
+    [
+      addTask,
+      addEvent,
+      deleteTask,
+      deleteEvent,
+      updateTask,
+      updateEvent,
+      toggleTask,
+      updatePreferences,
+      tasks,
+      events,
+      holidays,
+      preferences,
+      todayISO,
+      pushMessage,
+      canUseTemplate,
+      incrementTemplate,
+      openUpgradeModal,
+      user,
+    ],
+  );
+
+  const buildDayScheduleText = useCallback(
+    (isoDate: string): string => {
+      const dayEvents = events
+        .filter((e) => e.date === isoDate)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      const dayTasks = getVisibleTasksForDate(tasks, isoDate).filter((t) => t.status === 'pending');
+      const label = formatISOToJalaliLong(isoDate);
+
+      let text = `برنامه ${label}:\n\n`;
+      if (dayEvents.length === 0 && dayTasks.length === 0) {
+        text += 'برای این روز برنامه‌ای ثبت نشده — روزت کاملاً آزاده!';
+      } else {
+        for (const e of dayEvents) {
+          text += `• رویداد: ${e.title} — ساعت ${toFaDigits(e.startTime)}${e.location ? ` (${e.location})` : ''}\n`;
+        }
+        for (const t of dayTasks) {
+          text += `• کار: ${t.title}${t.dueTime ? ` — ساعت ${toFaDigits(t.dueTime)}` : ''} [${PRIORITY_LABELS[t.priority]}]\n`;
+        }
+      }
+      return text.trim();
+    },
+    [events, tasks],
   );
 
   const handleInfoIntent = useCallback(
     (intent: AIIntent): string | null => {
       switch (intent.action) {
         case 'find_free_time': {
-          const duration = (intent.duration as number) || 120;
+          const duration = (intent.duration as number) || (intent.durationMinutes as number) || 60;
           const result = findFreeSlots({
             events,
             tasks,
             holidays,
             workStart: preferences?.workStart ?? '08:00',
             workEnd: preferences?.workEnd ?? '20:00',
-            workDays: preferences?.workDays ?? [0, 1, 2, 3, 4],
+            workDays: preferences?.workDays ?? [6, 0, 1, 2, 3],
             durationMinutes: duration,
           });
           return calendarAi.generateScheduleSuggestion(result.slots, 'کار پیشنهادی');
         }
-        case 'show_today': {
-          const todayISO = getTodayISO();
-          const dayTasks = tasks.filter((t) => t.dueDate === todayISO && t.status === 'pending');
-          const dayEvents = events.filter((e) => e.date === todayISO);
-          let text = `برنامه امروز (${formatJalali(getTodayJalali(), 'long')}):\n\n`;
-          if (dayEvents.length === 0 && dayTasks.length === 0) {
-            text += 'امروز برنامه‌ای نداری. روزت خالیه!';
-          } else {
-            for (const e of dayEvents) text += `• رویداد: ${e.title} — ساعت ${toFaDigits(e.startTime)}\n`;
-            for (const t of dayTasks)
-              text += `• کار: ${t.title}${t.dueTime ? ` — ساعت ${toFaDigits(t.dueTime)}` : ''}\n`;
-          }
-          return text.trim();
+        case 'show_today':
+          return buildDayScheduleText(getTodayISO());
+        case 'show_day': {
+          const rawDate = (intent.date as string) || getTodayISO();
+          const iso = intentDateToISO(rawDate) ?? getTodayISO();
+          return buildDayScheduleText(iso);
         }
         case 'summarize_week': {
           const start = getStartOfWeek(getTodayJalali());
@@ -283,26 +821,24 @@ export function AssistantPage() {
           return calendarAi.generateWeeklyInsight(completed, pending);
         }
         case 'show_upcoming': {
-          const today = getTodayJalali();
-          let text = 'کارهای پیش‌رو:\n\n';
+          const iso = getTodayISO();
           const upcoming = tasks
-            .filter((t) => {
-              const iso = gregorianToISO(toGregorian(today.year, today.month, today.day));
-              return t.dueDate >= iso && t.status === 'pending';
-            })
+            .filter((t) => t.dueDate >= iso && t.status === 'pending')
+            .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
             .slice(0, 8);
           if (upcoming.length === 0) return 'کار پیش‌رویی نداری.';
+          let text = 'کارهای پیش‌رو:\n\n';
           for (const t of upcoming) {
-            const d = parseJalali(t.dueDate.replace(/-/g, '/'));
-            text += `• ${t.title} — ${d ? formatJalali(d, 'long') : t.dueDate}\n`;
+            text += `• ${t.title} — ${formatISOToJalaliLong(t.dueDate)} [${PRIORITY_LABELS[t.priority]}]\n`;
           }
           return text.trim();
         }
         case 'complete_task': {
-          const todayISO = getTodayISO();
-          const target = tasks.find(
-            (t) => t.status === 'pending' && (t.dueDate === todayISO || t.dueDate < todayISO),
-          );
+          const id = (intent.id as string) || '';
+          const titleQ = ((intent.title as string) || '').trim();
+          const target =
+            tasks.find((t) => t.status === 'pending' && (t.id === id || (titleQ && t.title.includes(titleQ)))) ??
+            tasks.find((t) => t.status === 'pending' && (t.dueDate === todayISO || t.dueDate < todayISO));
           if (!target) return 'کار در جریانی برای علامت‌زدن پیدا نکردم.';
           toggleTask(target.id);
           return `✓ «${target.title}» به‌عنوان انجام‌شده علامت خورد.`;
@@ -311,16 +847,106 @@ export function AssistantPage() {
           return null;
       }
     },
-    [events, tasks, holidays, preferences, toggleTask],
+    [events, tasks, holidays, preferences, toggleTask, buildDayScheduleText, todayISO],
   );
 
-  const offlineMessage: Omit<ChatMessage, 'id'> = {
-    role: 'assistant',
-    content:
-      'دستیار در حال حاضر آفلاین است و نمی‌توانم پاسخ بدهم.\n\n' +
-      'برای فعال‌سازی دستیار، مدیر سیستم باید از «پنل مدیریت ← هوش مصنوعی» سرویس را تنظیم کند.\n' +
-      'ثبت دستی کارها و رویدادها از تب‌های «کارها» و «تقویم» همچنان در دسترس است.',
-  };
+  // Local/Offline Smart Program Manager Fallback when LLM proxy is unavailable
+  const runLocalFallback = useCallback(
+    async (text: string): Promise<Omit<ChatMessage, 'id'>> => {
+      // Special local smart commands: prioritize / plan day / overdue
+      if (/اولویت|پیشنهاد\s*چیدمان/.test(text) && !/خودکار/.test(text)) {
+        const pending = tasks
+          .filter((t) => t.status === 'pending' && t.dueDate <= todayISO)
+          .sort((a, b) => {
+            const rank: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+            return rank[a.priority] - rank[b.priority];
+          });
+        const slots = findFreeSlots({
+          events,
+          tasks,
+          holidays,
+          workStart: preferences?.workStart ?? '08:00',
+          workEnd: preferences?.workEnd ?? '20:00',
+          workDays: preferences?.workDays ?? [6, 0, 1, 2, 3],
+          durationMinutes: 45,
+          daysAhead: 1,
+        }).slots;
+
+        if (pending.length === 0) {
+          return {
+            role: 'assistant',
+            offlineFallback: true,
+            content: 'الان کارِ در جریان یا عقب‌افتاده‌ای نداری! هر کار جدیدی بگی برات زمان‌بندی می‌کنم.',
+          };
+        }
+
+        let plan = 'پیشنهاد چیدمان و اولویت‌بندی امروز:\n\n';
+        pending.slice(0, 5).forEach((t, idx) => {
+          const slot = slots[idx];
+          plan += `${toFaDigits(String(idx + 1))}. [${PRIORITY_LABELS[t.priority]}] ${t.title}${
+            t.dueTime
+              ? ` — ساعت ${toFaDigits(t.dueTime)}`
+              : slot
+                ? ` — پیشنهاد: ${toFaDigits(slot.startTime)}`
+                : ''
+          }\n`;
+        });
+        return { role: 'assistant', offlineFallback: true, content: plan.trim() };
+      }
+
+      if (/عقب|تاخیر|گذشته/.test(text)) {
+        const overdue = tasks.filter((t) => t.status === 'pending' && t.dueDate < todayISO);
+        if (overdue.length === 0) {
+          return { role: 'assistant', offlineFallback: true, content: 'هیچ کار عقب‌افتاده‌ای نداری!' };
+        }
+        const list = overdue
+          .slice(0, 6)
+          .map((t) => `• ${t.title} (${formatISOToJalaliLong(t.dueDate)})`)
+          .join('\n');
+        return {
+          role: 'assistant',
+          offlineFallback: true,
+          content: `کارهای عقب‌افتاده (${toFaDigits(String(overdue.length))} مورد):\n\n${list}`,
+        };
+      }
+
+      const parsed = calendarAi.parseUserIntent(text);
+      const intent = parsed.intent;
+      if (intent && ['find_free_time', 'show_today', 'show_day', 'summarize_week', 'show_upcoming'].includes(intent.action)) {
+        const info = handleInfoIntent(intent);
+        if (info) return { role: 'assistant', offlineFallback: true, content: info };
+      }
+
+      if (intent && !parsed.needsConfirmation) {
+        await handleConfirm(intent as unknown as Record<string, unknown>);
+        return { role: 'assistant', offlineFallback: true, content: '' };
+      }
+
+      const fallbackReply =
+        parsed.confirmationMessage ||
+        'متوجه نشدم. می‌تونی دقیق‌تر بگی؟ مثلاً «فردا ساعت ۱۰ جلسه دارم» یا «برنامه امروز چیه؟».';
+
+      if (parsed.needsConfirmation && intent) {
+        return {
+          role: 'assistant',
+          offlineFallback: true,
+          content: fallbackReply,
+          intentData: intent as unknown as Record<string, unknown>,
+          actions: [
+            { label: 'ثبت کن', type: 'confirm' },
+            { label: 'انصراف', type: 'cancel' },
+          ],
+        };
+      }
+
+      return {
+        role: 'assistant',
+        offlineFallback: true,
+        content: fallbackReply,
+      };
+    },
+    [tasks, events, holidays, preferences, todayISO, handleInfoIntent, handleConfirm],
+  );
 
   const processUserInput = useCallback(
     async (text: string) => {
@@ -336,8 +962,13 @@ export function AssistantPage() {
         return;
       }
 
-      const isConfirmText = /^(بله|آره|ثبت کن|تأیید|باشه|درسته|انجام بده)\s*[!؟.]?$/i.test(text.trim());
-      const isCancelText = /^(نه|لغو|بی‌خیال|کنسل|انصراف|نمی‌خوام)\s*[!؟.]?$/i.test(text.trim());
+      const normalized = text.trim().replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+      const isConfirmText =
+        /^(لطفاً\s*|لطفا\s*)?(بله|آره|اره|ثبت\s*کن|ثبتش\s*کن|کار\s*(رو|را)?\s*ثبت\s*کن|رویداد\s*(رو|را)?\s*ثبت\s*کن|تایید|تأیید|تایید\s*کن|باشه|اوکی|OK|درسته|انجام\s*بده|بله\s*ثبت\s*کن)\s*[!؟.]*$/i.test(
+          normalized,
+        );
+      const isCancelText =
+        /^(نه|لغو|بی‌خیال|بیخیال|کنسل|انصراف|نمی‌خوام|نمیخوام|لغو\s*کن)\s*[!؟.]*$/i.test(normalized);
       if (isConfirmText || isCancelText) {
         const lastActionMsg = [...messages]
           .reverse()
@@ -346,6 +977,7 @@ export function AssistantPage() {
           clearActions();
           setThinking(false);
           if (isConfirmText) await handleConfirm(lastActionMsg.intentData);
+          else pushMessage({ role: 'assistant', content: 'باشه، انصراف دادم.' });
           return;
         }
       }
@@ -367,15 +999,12 @@ export function AssistantPage() {
         },
       });
 
-      if (!llmResponse) {
+      if (!llmResponse || isLLMError(llmResponse)) {
+        const fallbackMsg = await runLocalFallback(text);
         setThinking(false);
-        pushMessage(offlineMessage);
-        return;
-      }
-
-      if (isLLMError(llmResponse)) {
-        setThinking(false);
-        pushMessage(offlineMessage);
+        if (fallbackMsg.content) {
+          pushMessage(fallbackMsg);
+        }
         return;
       }
 
@@ -383,7 +1012,7 @@ export function AssistantPage() {
 
       const intent = llmResponse.intent as AIIntent | null;
 
-      if (llmResponse.clarify && llmResponse.clarify.partialIntent) {
+      if (llmResponse.clarify && (llmResponse.clarify.partialIntent || llmResponse.clarify.quickReplies.length > 0)) {
         setThinking(false);
         pushMessage({
           role: 'assistant',
@@ -391,6 +1020,24 @@ export function AssistantPage() {
           clarify: llmResponse.clarify,
           intentData: llmResponse.clarify.partialIntent,
         });
+        return;
+      }
+
+      const explicitUserCommand =
+        /ثبت\s*کن|ثبتش\s*کن|اضافه\s*کن|یادم\s*بنداز|یادآوری\s*کن|برام\s*بذار|بگذار|تنظیم\s*کن/.test(normalized);
+      const isDestructive = intent?.action === 'delete_task' || intent?.action === 'delete_event';
+
+      if (intent && ['find_free_time', 'show_today', 'show_day', 'summarize_week', 'show_upcoming'].includes(intent.action)) {
+        const info = handleInfoIntent(intent);
+        setThinking(false);
+        pushMessage({ role: 'assistant', content: info ?? llmResponse.reply });
+        return;
+      }
+
+      // Auto-execute when LLM says needsConfirmation:false OR user explicitly commanded registration (and not destructive)
+      if (intent && (!llmResponse.needsConfirmation || (explicitUserCommand && !isDestructive))) {
+        setThinking(false);
+        await handleConfirm(intent);
         return;
       }
 
@@ -408,26 +1055,43 @@ export function AssistantPage() {
         return;
       }
 
-      if (intent && ['find_free_time', 'show_today', 'show_day', 'summarize_week', 'show_upcoming', 'complete_task'].includes(intent.action)) {
-        const info = handleInfoIntent(intent);
-        setThinking(false);
-        pushMessage({ role: 'assistant', content: info ?? llmResponse.reply });
-        return;
-      }
-
       setThinking(false);
       pushMessage({ role: 'assistant', content: llmResponse.reply });
     },
-    [messages, tasks, events, holidays, handleConfirm, handleInfoIntent, clearActions, pushMessage],
+    [
+      messages,
+      tasks,
+      events,
+      holidays,
+      preferences,
+      user,
+      canUseAiAssistant,
+      incrementAiAssistant,
+      openUpgradeModal,
+      handleConfirm,
+      handleInfoIntent,
+      runLocalFallback,
+      clearActions,
+      pushMessage,
+    ],
+  );
+
+  const sendPrompt = useCallback(
+    (prompt: string) => {
+      const trimmed = prompt.trim();
+      if (!trimmed || thinking) return;
+      pushMessage({ role: 'user', content: trimmed });
+      void processUserInput(trimmed);
+    },
+    [thinking, pushMessage, processUserInput],
   );
 
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || thinking) return;
-    pushMessage({ role: 'user', content: text });
     setInput('');
-    void processUserInput(text);
-  }, [input, thinking, pushMessage, processUserInput]);
+    sendPrompt(text);
+  }, [input, thinking, sendPrompt]);
 
   const handleActionClick = useCallback(
     async (action: 'confirm' | 'cancel', msg: ChatMessage) => {
@@ -441,31 +1105,297 @@ export function AssistantPage() {
     [clearActions, handleConfirm, pushMessage],
   );
 
+  useEffect(() => {
+    const prompt = consumePendingAiPrompt();
+    if (prompt) {
+      pushMessage({ role: 'user', content: prompt });
+      void processUserInput(prompt);
+    }
+  }, [consumePendingAiPrompt, pushMessage, processUserInput]);
+
+  const silenceTimerRef = useRef<number | null>(null);
+
+  const toggleListening = useCallback(() => {
+    setVoiceError(null);
+    if (isListening) {
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) {
+      setVoiceError('مرورگر شما از تبدیل گفتار به متن پشتیبانی نمی‌کند.');
+      return;
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    const recognition = new Ctor();
+    recognition.lang = 'fa-IR';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    let finalTranscript = '';
+    let latestCombined = '';
+
+    const resetSilenceTimer = () => {
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current);
+      }
+      silenceTimerRef.current = window.setTimeout(() => {
+        silenceTimerRef.current = null;
+        recognition.stop();
+      }, 2800);
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const text = res[0]?.transcript ?? '';
+        if (res.isFinal) {
+          finalTranscript += text + ' ';
+        } else {
+          interim += text;
+        }
+      }
+      latestCombined = (finalTranscript + interim).trim();
+      setInput(latestCombined);
+      if (latestCombined) {
+        resetSilenceTimer();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      setIsListening(false);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        setVoiceError('دسترسی میکروفون داده نشد. لطفاً مجوز میکروفون را فعال کنید.');
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        setVoiceError('خطا در دریافت صدا. دوباره تلاش کنید.');
+      }
+    };
+
+    recognition.onend = () => {
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      setIsListening(false);
+      const textToSend = (finalTranscript || latestCombined).trim();
+      if (textToSend && !thinking) {
+        setInput('');
+        pushMessage({ role: 'user', content: textToSend });
+        void processUserInput(textToSend);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      setIsListening(false);
+      setVoiceError('امکان شروع ضبط صدا وجود ندارد.');
+    }
+  }, [isListening, thinking, pushMessage, processUserInput]);
+
+  const handleResetChat = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    const initial: ChatMessage[] = [{ id: nextId(), role: 'assistant', content: buildGreeting() }];
+    lastSpokenIdRef.current = initial[0].id;
+    setMessages(initial);
+    saveMessages(initial);
+  };
+
   const quickPrompts = [
     'برنامه امروزم چیه؟',
-    'فردا ساعت ۱۰ جلسه دارم',
-    'یادم بنداز پنجشنبه قبض رو بپردازم',
+    'کارهای امروز رو برام اولویت‌بندی کن',
+    'فردا ساعت ۱۰ جلسه با تیم دارم',
     'هفته پیش رو چه زمانی آزادم؟',
+    'خلاصه عملکرد این هفته‌ام چطوره؟',
     'چه تاریخی برای مسافرت خوبه؟',
   ];
 
-  return (
-    <div className="flex h-[calc(100vh-14rem)] flex-col lg:h-[calc(100vh-12rem)]">
-      {/* Assistant header with identity */}
-      <div className="mb-3 flex items-center gap-3">
-        <div className="relative">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 text-white shadow-lg shadow-primary-900/20">
-            <Sparkles className="h-5 w-5" />
+  const renderIntentPreview = (intentData: Record<string, unknown>) => {
+    const action = (intentData.action as string) || '';
+    const title = (intentData.title as string) || '';
+    const dateRaw = (intentData.date as string) || '';
+    const iso = dateRaw ? intentDateToISO(dateRaw) : null;
+    const dateLabel = iso ? formatISOToJalaliLong(iso) : dateRaw;
+    const time = (intentData.startTime as string) || (intentData.time as string) || '';
+    const endTime = (intentData.endTime as string) || '';
+    const location = (intentData.location as string) || '';
+    const priority = intentData.priority as Priority | undefined;
+    const category = intentData.category as TaskCategory | undefined;
+    const recurrence = intentData.recurrence as string | undefined;
+    const isCreate = action.startsWith('create_');
+    const conflict = isCreate && iso && time ? detectConflict(iso, time) : null;
+
+    return (
+      <div className="mt-2 rounded-2xl border border-slate-200/80 bg-surface/90 p-3 space-y-2 text-right">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1 rounded-lg bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-700">
+            <Sparkles className="h-3 w-3" />
+            {ACTION_LABELS[action] ?? 'عملیات'}
+          </span>
+          {priority && PRIORITY_LABELS[priority] && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              اولویت: {PRIORITY_LABELS[priority]}
+            </span>
+          )}
+        </div>
+
+        {title && <p className="text-xs font-bold text-slate-900">{title}</p>}
+
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+          {dateLabel && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 border border-slate-200/70">
+              <CalendarDays className="h-3 w-3 text-primary-500" />
+              {dateLabel}
+            </span>
+          )}
+          {time && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 border border-slate-200/70">
+              <Clock className="h-3 w-3 text-accent-600" />
+              {toFaDigits(time)}
+              {endTime ? ` تا ${toFaDigits(endTime)}` : ''}
+            </span>
+          )}
+          {location && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 border border-slate-200/70">
+              <MapPin className="h-3 w-3 text-slate-400" />
+              {location}
+            </span>
+          )}
+          {category && CATEGORY_LABELS[category] && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 border border-slate-200/70">
+              <Tag className="h-3 w-3 text-slate-400" />
+              {CATEGORY_LABELS[category]}
+            </span>
+          )}
+          {recurrence && recurrence !== 'none' && RECURRENCE_LABELS[recurrence] && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-accent-50 px-2 py-0.5 text-accent-700">
+              <Repeat className="h-3 w-3" />
+              {RECURRENCE_LABELS[recurrence]}
+            </span>
+          )}
+        </div>
+
+        {conflict && (
+          <div className="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-2.5 py-1.5 text-[11px] font-medium text-amber-800">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+            <span>هشدار: {conflict}</span>
           </div>
-          <div className="absolute -bottom-0.5 -left-0.5 h-3.5 w-3.5 rounded-full bg-accent-400 border-2 border-white" />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-12.5rem)] flex-col lg:h-[calc(100vh-5rem)]">
+      {/* Assistant header with identity */}
+      <div className="card-premium mb-2.5 flex items-center justify-between rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 text-white shadow-lg shadow-primary-900/20">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="absolute -bottom-0.5 -left-0.5 h-3.5 w-3.5 rounded-full bg-accent-400 border-2 border-white" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900">مدیر برنامه هوشمند یادتو</h2>
+            <p className="text-[11px] text-accent-600 font-medium flex items-center gap-1">
+              <Brain className="h-3 w-3" />
+              متصل به تقویم، کارها و موتور زمان‌بندی
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">یادتو</h2>
-          <p className="text-[11px] text-accent-600 font-medium flex items-center gap-1">
-            <Brain className="h-3 w-3" />
-            دستیار هوشمند شخصی
-          </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const next = !voiceReplyEnabled;
+              setVoiceReplyEnabled(next);
+              if (!next && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+              }
+            }}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
+              voiceReplyEnabled
+                ? 'border-accent-300 bg-accent-50 text-accent-700'
+                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+            }`}
+            title={voiceReplyEnabled ? 'خاموش کردن پاسخ صوتی' : 'روشن کردن پاسخ صوتی'}
+          >
+            {voiceReplyEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{voiceReplyEnabled ? 'پاسخ صوتی فعال' : 'پاسخ صوتی'}</span>
+          </button>
+
+          {messages.length > 1 && (
+            <button
+              onClick={handleResetChat}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              title="شروع گفتگوی جدید"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">گفتگوی جدید</span>
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Live Program Manager Context Strip */}
+      <div className="mb-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+        <button
+          onClick={() => sendPrompt('برنامه امروزم چیه؟')}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-primary-300 hover:text-primary-700 transition-colors"
+        >
+          <ListTodo className="h-3.5 w-3.5 text-primary-600" />
+          {toFaDigits(String(todayPendingCount))} کار امروز
+        </button>
+        <button
+          onClick={() => sendPrompt('رویدادهای امروز چیا هستن؟')}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-accent-300 hover:text-accent-700 transition-colors"
+        >
+          <CalendarDays className="h-3.5 w-3.5 text-accent-600" />
+          {toFaDigits(String(todayEventsCount))} رویداد
+        </button>
+        <button
+          onClick={() => sendPrompt('زمان‌های آزاد این هفته کجاست؟')}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-cyan-300 hover:text-cyan-700 transition-colors"
+        >
+          <Coffee className="h-3.5 w-3.5 text-cyan-600" />
+          زمان آزاد: {formatFreeTime(todaySchedule.freeMinutes)}
+        </button>
+        {overdueCount > 0 && (
+          <button
+            onClick={() => sendPrompt('کارهای عقب‌افتاده‌ام چیا هستن؟')}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-100 transition-colors"
+          >
+            <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+            {toFaDigits(String(overdueCount))} عقب‌افتاده
+          </button>
+        )}
+        <button
+          onClick={() => sendPrompt('کارهای بدون ساعت من رو به‌صورت خودکار در وقت‌های آزاد بچین')}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-primary-200 bg-primary-50 px-3 py-1.5 text-[11px] font-semibold text-primary-700 hover:bg-primary-100 transition-colors"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-primary-600" />
+          چیدمان خودکار کارها
+        </button>
       </div>
 
       {/* Messages */}
@@ -478,43 +1408,99 @@ export function AssistantPage() {
               </div>
             )}
             <div
-              className={`max-w-[80%] space-y-2 rounded-2xl px-4 py-2.5 text-sm leading-6 ${
+              className={`max-w-[85%] sm:max-w-[78%] space-y-2 rounded-2xl px-4 py-3 text-sm leading-6 ${
                 m.role === 'user'
-                  ? 'rounded-bl-md bg-primary-700 text-white'
+                  ? 'rounded-bl-md bg-primary-700 text-white shadow-sm'
                   : 'card-base rounded-br-md text-slate-700'
               }`}
             >
+              {m.offlineFallback && (
+                <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                  پردازش آفلاین هوشمند
+                </span>
+              )}
+
               <p className="whitespace-pre-line text-right">{m.content}</p>
 
-              {m.clarify && m.clarify.quickReplies.length > 0 && (
-                <div className="flex flex-wrap justify-end gap-2 pt-1">
-                  {m.clarify.quickReplies.map((qr) => (
-                    <button
-                      key={qr}
-                      onClick={() => {
-                        pushMessage({ role: 'user', content: qr });
-                        void processUserInput(qr);
-                      }}
-                      className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs text-primary-700 hover:bg-primary-100 transition-colors"
-                    >
-                      {qr}
-                    </button>
-                  ))}
+              {/* Structured Action Preview Card */}
+              {m.intentData && m.actions && m.actions.length > 0 && renderIntentPreview(m.intentData)}
+
+              {/* Clarify Quick Replies & Smart Pickers */}
+              {m.clarify && (
+                <div className="space-y-2 pt-1">
+                  {m.clarify.quickReplies.length > 0 && (
+                    <div className="flex flex-wrap justify-start gap-1.5">
+                      {m.clarify.quickReplies.map((qr) => (
+                        <button
+                          key={qr}
+                          onClick={() => sendPrompt(qr)}
+                          className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors"
+                        >
+                          {qr}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {m.clarify.needsDatePicker && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">تاریخ سریع:</span>
+                      {['امروز', 'فردا', 'پس‌فردا', 'شنبه آینده'].map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => sendPrompt(d)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-primary-300 hover:text-primary-700"
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {m.clarify.needsTimePicker && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">ساعت سریع:</span>
+                      {['۰۹:۰۰', '۱۱:۰۰', '۱۴:۰۰', '۱۷:۰۰', '۲۰:۰۰'].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => sendPrompt(`ساعت ${t}`)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-accent-300 hover:text-accent-700"
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {m.clarify.needsPriorityPicker && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">اولویت:</span>
+                      {['اولویت بالا', 'اولویت متوسط', 'اولویت کم'].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => sendPrompt(p)}
+                          className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100"
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {m.actions && m.actions.length > 0 && (
-                <div className="flex justify-end gap-2 pt-1">
+                <div className="flex justify-start gap-2 pt-1">
                   <button
                     onClick={() => void handleActionClick('confirm', m)}
-                    className="flex items-center gap-1 rounded-full bg-accent-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-600 transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl bg-accent-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-accent-700 transition-colors"
                   >
                     <Check className="h-3.5 w-3.5" />
-                    {m.actions.find((a) => a.type === 'confirm')?.label ?? 'تایید'}
+                    {m.actions.find((a) => a.type === 'confirm')?.label ?? 'تایید و ثبت'}
                   </button>
                   <button
                     onClick={() => void handleActionClick('cancel', m)}
-                    className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
                     {m.actions.find((a) => a.type === 'cancel')?.label ?? 'لغو'}
@@ -541,14 +1527,11 @@ export function AssistantPage() {
 
       {/* Quick prompts (only at start) */}
       {messages.length <= 1 && (
-        <div className="flex flex-wrap justify-end gap-2 pb-2">
+        <div className="flex flex-wrap justify-start gap-2 pb-2">
           {quickPrompts.map((q) => (
             <button
               key={q}
-              onClick={() => {
-                pushMessage({ role: 'user', content: q });
-                void processUserInput(q);
-              }}
+              onClick={() => sendPrompt(q)}
               className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
             >
               <Zap className="h-3 w-3 text-accent-500" />
@@ -558,8 +1541,43 @@ export function AssistantPage() {
         </div>
       )}
 
+      {/* Voice status / error */}
+      {(isListening || voiceError) && (
+        <div
+          className={`mb-2 flex items-center justify-between rounded-xl px-3.5 py-2 text-xs ${
+            voiceError
+              ? 'bg-red-50 text-red-600 border border-red-100'
+              : 'bg-accent-50 text-accent-800 border border-accent-200'
+          }`}
+        >
+          <span className="flex items-center gap-2 font-medium">
+            {isListening && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
+            {voiceError ?? 'در حال گوش دادن... با مکث ۳ ثانیه‌ای یا زدن دکمه میکروفون ارسال می‌شود'}
+          </span>
+          {voiceError && (
+            <button onClick={() => setVoiceError(null)} className="text-red-400 hover:text-red-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Input */}
       <div className="card-base flex items-center gap-2 rounded-2xl p-2">
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={thinking}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+            isListening
+              ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse'
+              : 'bg-slate-100 text-slate-600 hover:bg-primary-50 hover:text-primary-700'
+          } disabled:opacity-40`}
+          aria-label={isListening ? 'توقف ضبط صدا' : 'گفتگوی صوتی'}
+          title={isListening ? 'توقف ضبط صدا' : 'صحبت با دستیار'}
+        >
+          {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -569,13 +1587,13 @@ export function AssistantPage() {
               handleSend();
             }
           }}
-          placeholder="بنویس... مثلاً «پنجشنبه ساعت ۱۵ آزمایش دارم»"
-          className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+          placeholder={isListening ? 'در حال شنیدن صدای شما...' : 'بنویس یا صحبت کن... مثلاً «پنجشنبه ساعت ۱۵ آزمایش دارم»'}
+          className="flex-1 bg-transparent px-2 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || thinking}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-700 text-white transition-colors hover:bg-primary-800 disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-700 text-white transition-colors hover:bg-primary-800 disabled:opacity-40"
           aria-label="ارسال"
         >
           <Send className="h-4 w-4 -scale-x-100" />

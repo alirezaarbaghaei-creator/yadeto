@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import * as api from '@/lib/api';
 import type { AppUser } from '@/lib/api';
 import { getItem } from '@/lib/safeStorage';
@@ -59,14 +59,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ session: null, user: null });
   },
   restoreSession: async () => {
-    const token = getItem('kateb_token');
+    const token = getItem('YADETO_token');
     if (!token) {
       set({ session: null, user: null, loading: false });
       return;
     }
     const user = await api.getMe();
     if (user) {
-      const token = getItem('kateb_token') ?? '';
+      const token = getItem('YADETO_token') ?? '';
       set({ session: { access_token: token }, user, loading: false });
       usePlanStore.getState().refreshFromUser(
         (user.plan_type as PlanId) ?? 'free',

@@ -1,25 +1,25 @@
-import type { PlanId } from '@/data/plans';
+﻿import type { PlanId } from '@/data/plans';
 
 export const CAFE_BAZAAR_PRODUCTS = {
   basic: {
-    1: 'kateb_basic_1m',
-    3: 'kateb_basic_3m',
-    6: 'kateb_basic_6m',
+    1: 'YADETO_basic_1m',
+    3: 'YADETO_basic_3m',
+    6: 'YADETO_basic_6m',
   },
   pro: {
-    1: 'kateb_pro_1m',
-    3: 'kateb_pro_3m',
-    6: 'kateb_pro_6m',
+    1: 'YADETO_pro_1m',
+    3: 'YADETO_pro_3m',
+    6: 'YADETO_pro_6m',
   },
 } as const;
 
 export type BazaarProductId =
-  | 'kateb_basic_1m'
-  | 'kateb_basic_3m'
-  | 'kateb_basic_6m'
-  | 'kateb_pro_1m'
-  | 'kateb_pro_3m'
-  | 'kateb_pro_6m';
+  | 'YADETO_basic_1m'
+  | 'YADETO_basic_3m'
+  | 'YADETO_basic_6m'
+  | 'YADETO_pro_1m'
+  | 'YADETO_pro_3m'
+  | 'YADETO_pro_6m';
 
 export type BillingMonths = 1 | 3 | 6;
 

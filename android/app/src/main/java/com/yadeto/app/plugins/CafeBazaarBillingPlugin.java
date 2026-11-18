@@ -1,4 +1,4 @@
-package com.kateb.app.plugins;
+package com.yadeto.app.plugins;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -77,7 +77,7 @@ public class CafeBazaarBillingPlugin extends Plugin {
     private static final String BILLING_SERVICE_ACTION = "ir.cafebazaar.pardakht.InAppBillingService.BIND";
 
     /**
-     * FIX (pay): CafeBazaar RSA public key for this app (com.kateb.app), taken from the
+     * FIX (pay): CafeBazaar RSA public key for this app (com.yadeto.app), taken from the
      * CafeBazaar developer panel. Bazaar signs INAPP_PURCHASE_DATA with the matching
      * private key; verifying that signature here is the only local proof that the
      * purchase payload really came from Bazaar instead of a tampered response.

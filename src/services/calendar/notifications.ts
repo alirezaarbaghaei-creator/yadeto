@@ -8,6 +8,73 @@
 import { isNativeApp } from '@/lib/capacitor';
 
 const timers = new Map<string, number>();
+const firedKeys = new Set<string>();
+
+export interface ActiveAlarm {
+  id: string;
+  title: string;
+  body: string;
+  triggeredAt: number;
+}
+
+type AlarmListener = (alarm: ActiveAlarm) => void;
+const alarmListeners = new Set<AlarmListener>();
+
+export function subscribeToAlarms(listener: AlarmListener): () => void {
+  alarmListeners.add(listener);
+  return () => {
+    alarmListeners.delete(listener);
+  };
+}
+
+export function playAlarmSound(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [587.33, 783.99, 987.77]; // D5, G5, B5 pleasant chime
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + idx * 0.16;
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.38);
+    });
+  } catch {
+    /* ignore audio context restrictions */
+  }
+}
+
+export function triggerAlarm(title: string, body: string): void {
+  playAlarmSound();
+  showNotification(title, body);
+  const alarm: ActiveAlarm = {
+    id: `alarm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title,
+    body,
+    triggeredAt: Date.now(),
+  };
+  for (const listener of alarmListeners) {
+    listener(alarm);
+  }
+}
+
+export function snoozeAlarm(alarm: ActiveAlarm, minutes = 10): void {
+  const handle = window.setTimeout(() => {
+    triggerAlarm(alarm.title, `${alarm.body} (یادآوری مجدد)`);
+  }, minutes * 60 * 1000);
+  timers.set(`snooze-${alarm.id}`, handle);
+}
 
 // ─── native (Capacitor) ───────────────────────────────────────
 
@@ -155,12 +222,59 @@ export async function scheduleReminder(
   const handle = window.setTimeout(
     () => {
       timers.delete(id);
-      showNotification(title, body);
+      triggerAlarm(title, body);
     },
     Math.min(delay, MAX_DELAY),
   );
   timers.set(id, handle);
   return id;
+}
+
+export interface WatchableReminderItem {
+  id: string;
+  title: string;
+  date: string;
+  time?: string;
+  reminder?: number;
+  kind: 'task' | 'event';
+}
+
+/**
+ * Periodically checks tasks/events so alarms & notifications fire reliably even
+ * if the item was created before page reload.
+ */
+export function startReminderWatcher(getItems: () => WatchableReminderItem[]): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  const check = () => {
+    const now = Date.now();
+    for (const item of getItems()) {
+      if (!item.date || !item.time) continue;
+      if (item.reminder !== undefined && item.reminder < 0) continue;
+      const minsBefore = item.reminder ?? 15;
+      const [y, m, d] = item.date.split('-').map(Number);
+      const [hh, mm] = item.time.split(':').map(Number);
+      if ([y, m, d, hh, mm].some((n) => Number.isNaN(n))) continue;
+
+      const triggerMs = new Date(y, m - 1, d, hh, mm, 0).getTime() - minsBefore * 60 * 1000;
+      const key = `${item.kind}:${item.id}:${triggerMs}`;
+      if (firedKeys.has(key)) continue;
+
+      // Fire if we are within [triggerMs, triggerMs + 60s]
+      if (now >= triggerMs && now <= triggerMs + 60_000) {
+        firedKeys.add(key);
+        const body =
+          minsBefore > 0
+            ? `${minsBefore} دقیقه تا «${item.title}» باقی مانده.`
+            : `وقت «${item.title}» رسید.`;
+        triggerAlarm(item.kind === 'event' ? 'آلارم رویداد' : 'آلارم کار', body);
+      }
+    }
+  };
+
+  const intervalId = window.setInterval(check, 15_000);
+  check();
+  return () => window.clearInterval(intervalId);
 }
 
 export async function scheduleTaskReminder(

@@ -443,6 +443,7 @@ export function MobileAccountDrawer({ onClose }: { onClose: () => void }) {
 export function Sidebar() {
   const currentPage = useAppStore((s) => s.currentPage);
   const setPage = useAppStore((s) => s.setPage);
+  const openQuickAdd = useAppStore((s) => s.openQuickAdd);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const navItems = useNavItems();
@@ -451,16 +452,32 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed top-0 right-0 h-screen w-64 flex-col border-l border-slate-200/50 bg-white/80 backdrop-blur-xl z-40">
-        <div className="flex items-center gap-3 px-6 py-6">
-          <BrandLogo />
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">یادتو</h1>
-            <p className="text-[11px] text-slate-500">همراه هوشمند زندگی تو</p>
+      <aside className="hidden lg:flex fixed top-0 right-0 h-screen w-72 flex-col border-l border-slate-200/70 bg-white/85 backdrop-blur-2xl z-40">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4">
+          <div className="flex items-center gap-3">
+            <BrandLogo />
+            <div>
+              <h1 className="text-lg font-extrabold tracking-tight text-slate-900">یادتو</h1>
+              <p className="text-[11px] font-medium text-primary-600">مدیر برنامه هوشمند</p>
+            </div>
           </div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2.5 py-1 text-[10px] font-semibold text-accent-700 border border-accent-200/60">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-500 animate-pulse" />
+            AI
+          </span>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => openQuickAdd('picker')}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-primary-600 to-primary-800 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-700/20 hover:shadow-primary-700/30 hover:brightness-105 active:scale-[0.99] transition-all"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            ثبت کار یا رویداد جدید
+          </button>
+        </div>
+
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = currentPage === item.id;
@@ -468,50 +485,67 @@ export function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'text-primary-800 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'text-primary-600' : 'text-slate-400'}`} />
-                {item.label}
-                {active && <span className="mr-auto h-1.5 w-1.5 rounded-full bg-primary-600" />}
+                {active && (
+                  <motion.div
+                    layoutId="sidebar-active-pill"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 rounded-2xl bg-primary-50/90 border border-primary-200/60"
+                  />
+                )}
+                <Icon className={`relative z-10 h-5 w-5 ${active ? 'text-primary-600' : 'text-slate-400'}`} />
+                <span className="relative z-10">{item.label}</span>
+                {item.id === 'assistant' && (
+                  <span className="relative z-10 mr-auto rounded-lg bg-accent-100/80 px-2 py-0.5 text-[10px] font-bold text-accent-700">
+                    هوشمند
+                  </span>
+                )}
+                {active && item.id !== 'assistant' && (
+                  <span className="relative z-10 mr-auto h-1.5 w-1.5 rounded-full bg-primary-600" />
+                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="px-3 pb-6 space-y-3">
+        <div className="px-4 pb-5 space-y-3 border-t border-slate-100 pt-3">
           <CreditBadge />
 
-          <div className="rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 p-4 text-white shadow-lg shadow-primary-900/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-accent-300" />
-              <p className="text-sm font-semibold">دستیار هوشمند</p>
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-primary-950 to-slate-900 p-4 text-white shadow-lg shadow-slate-900/15">
+            <div className="absolute -left-6 -top-6 h-20 w-20 rounded-full bg-accent-400/15 blur-xl" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles className="h-4 w-4 text-accent-300" />
+                <p className="text-xs font-bold">دستیار مدیر برنامه</p>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                زمان‌بندی، پیدا کردن وقت آزاد و ثبت با یک جمله فارسی
+              </p>
+              <button
+                onClick={() => setPage('assistant')}
+                className="mt-3 w-full rounded-xl bg-white/12 hover:bg-white/20 border border-white/10 transition-colors py-2 text-xs font-semibold"
+              >
+                باز کردن دستیار
+              </button>
             </div>
-            <p className="text-xs text-primary-100 leading-relaxed">
-              کار و رویداد را با یک جمله فارسی ثبت کن
-            </p>
-            <button
-              onClick={() => setPage('assistant')}
-              className="mt-3 w-full rounded-xl bg-white/10 hover:bg-white/20 transition-colors py-2 text-xs font-medium"
-            >
-              شروع گفتگو
-            </button>
           </div>
 
           {user && (
-            <div className="rounded-2xl bg-white border border-slate-200/60 p-3 space-y-2">
+            <div className="rounded-2xl bg-surface/80 border border-slate-200/70 p-2.5 space-y-1">
               <button
                 onClick={() => setPage(user?.is_admin ? 'admin' : 'account')}
-                className="w-full flex items-center gap-3 text-right hover:bg-slate-50 rounded-xl p-2 transition-colors"
+                className="w-full flex items-center gap-3 text-right hover:bg-white rounded-xl p-2 transition-colors"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-900 text-white text-sm font-bold">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-slate-700 truncate">
+                  <p className="text-xs font-semibold text-slate-800 truncate">
                     {displayName}
                   </p>
                   <p className="text-[10px] text-slate-400 truncate">{user?.is_admin ? 'پنل مدیریت' : 'حساب کاربری'}</p>
@@ -521,9 +555,9 @@ export function Sidebar() {
 
               <button
                 onClick={() => signOut()}
-                className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-red-500 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50"
+                className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50/70"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
                 خروج از حساب
               </button>
             </div>
@@ -538,10 +572,11 @@ export function BottomNav() {
   const currentPage = useAppStore((s) => s.currentPage);
   const setPage = useAppStore((s) => s.setPage);
   const openQuickAdd = useAppStore((s) => s.openQuickAdd);
-  const navItems = useNavItems();
 
-  const leftItems = navItems.slice(0, 2);
-  const rightItems = navItems.slice(2);
+  // Use the 4 core tabs so the center Quick-Add (+) button is always mathematically centered in a 5-column grid.
+  // Account & Admin pages remain accessible from the top MobileHeader profile button.
+  const rightItems = baseNavItems.slice(0, 2);
+  const leftItems = baseNavItems.slice(2, 4);
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -550,20 +585,25 @@ export function BottomNav() {
       <button
         key={item.id}
         onClick={() => setPage(item.id)}
-        className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl transition-colors"
+        className="relative flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl transition-colors"
       >
+        {active && (
+          <motion.span
+            layoutId="mobile-bottom-pill"
+            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+            className="absolute inset-x-1.5 inset-y-0.5 rounded-2xl bg-primary-50/90 border border-primary-100/80"
+          />
+        )}
         <div
-          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
-            active
-              ? 'bg-primary-700 text-white shadow-lg shadow-primary-700/25 scale-105'
-              : 'text-slate-400'
+          className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-xl transition-transform duration-200 ${
+            active ? 'text-primary-700 scale-105' : 'text-slate-400'
           }`}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.9} />
         </div>
         <span
-          className={`text-[10px] font-medium ${
-            active ? 'text-primary-700' : 'text-slate-400'
+          className={`relative z-10 text-[10px] leading-none transition-colors ${
+            active ? 'font-bold text-primary-700' : 'font-medium text-slate-400'
           }`}
         >
           {item.label}
@@ -573,21 +613,25 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/85 backdrop-blur-xl border-t border-slate-200/50">
-      <div className="relative flex items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {leftItems.map(renderNavItem)}
-
-        {/* Center FAB */}
-        <button
-          onClick={() => openQuickAdd('picker')}
-          className="relative -mt-8 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-primary-900 text-white shadow-xl shadow-primary-900/30 transition-all active:scale-95 hover:scale-105"
-          aria-label="افزودن کار یا رویداد"
-        >
-          <Plus className="h-7 w-7" strokeWidth={2.5} />
-          <span className="absolute inset-0 rounded-full ring-4 ring-white/85" />
-        </button>
-
+    <nav
+      aria-label="ناوبری موبایل"
+      className="lg:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 rounded-3xl border border-slate-200/80 bg-white/92 backdrop-blur-2xl shadow-glass-lg px-2 py-1.5"
+    >
+      <div className="grid grid-cols-5 items-center gap-1">
         {rightItems.map(renderNavItem)}
+
+        {/* Perfectly Centered Quick-Add FAB */}
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => openQuickAdd('picker')}
+            className="relative -mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white shadow-xl shadow-primary-800/35 ring-4 ring-white transition-all active:scale-95 hover:scale-105"
+            aria-label="افزودن کار یا رویداد"
+          >
+            <Plus className="h-7 w-7" strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {leftItems.map(renderNavItem)}
       </div>
     </nav>
   );

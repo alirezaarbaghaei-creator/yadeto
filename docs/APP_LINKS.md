@@ -1,8 +1,8 @@
-# Android App Links — assetlinks.json
+﻿# Android App Links — assetlinks.json
 
 This file must be served at:
 ```
-https://app.kateb.site/.well-known/assetlinks.json
+https://app.YADETO.site/.well-known/assetlinks.json
 ```
 
 ## What to do
@@ -21,9 +21,9 @@ https://app.kateb.site/.well-known/assetlinks.json
    `Content-Type: application/json` and HTTPS.
 5. Reinstall the APK on a device and test the App Link:
    ```
-   https://app.kateb.site/payment/result?order_id=TEST
+   https://app.YADETO.site/payment/result?order_id=TEST
    ```
-   It should open the Kateb app directly instead of Chrome.
+   It should open the YADETO app directly instead of Chrome.
 
 ## Debug builds
 

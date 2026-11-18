@@ -143,6 +143,47 @@ function isCompleteTask(text: string): boolean {
   return /انجام\s*دادم|تمام\s*کردم|انجام\s*شد|کامل\s*کردم/.test(text);
 }
 
+function isExplicitCommand(text: string): boolean {
+  return /ثبت\s*کن|ثبتش\s*کن|اضافه\s*کن|یادم\s*بنداز|یادآوری\s*کن|برام\s*بذار|بگذار|بنویس|تنظیم\s*کن/.test(text);
+}
+
+function isAutoSchedule(text: string): boolean {
+  return /(خودکار|اتوماتیک).*(بچین|زمان‌بندی)|زمان‌بندی\s*خودکار|کارها\s*رو\s*تو\s*وقت\s*آزاد\s*بچین/.test(text);
+}
+
+function extractPriority(text: string): 'high' | 'medium' | 'low' {
+  if (/فوری|مهم|حیاتی|اولویت\s*(بالا|زیاد|مهم)|ضروری/.test(text)) return 'high';
+  if (/کم\s*اهمیت|اولویت\s*(کم|پایین)/.test(text)) return 'low';
+  return 'medium';
+}
+
+function extractCategory(text: string): 'work' | 'personal' | 'health' | 'finance' | 'education' | 'social' | 'other' | undefined {
+  if (/کار(ی)?|جلسه|پروژه|اداری|شرکت/.test(text)) return 'work';
+  if (/قسط|مالی|بانک|قبض|پرداخت|حقوق|خرید/.test(text)) return 'finance';
+  if (/دکتر|پزشک|دارو|ورزش|سلامت|آزمایش|باشگاه/.test(text)) return 'health';
+  if (/درس|امتحان|کلاس|دانشگاه|آموزش|تحصیل|مطالعه|تمرین/.test(text)) return 'education';
+  if (/مهمانی|تولد|دوست|خانواده|اجتماعی|دورهمی/.test(text)) return 'social';
+  if (/شخصی/.test(text)) return 'personal';
+  return undefined;
+}
+
+function extractReminderMinutes(text: string): number | undefined {
+  if (/بدون\s*یادآور/.test(text)) return -1;
+  const minMatch = text.match(/(\d+|[\u06F0-\u06F9]+)\s*دقیقه\s*(?:قبل|زودتر)/);
+  if (minMatch) return digitsToNumber(minMatch[1]);
+  const hourMatch = text.match(/(\d+|[\u06F0-\u06F9]+)\s*ساعت\s*(?:قبل|زودتر)/);
+  if (hourMatch) return digitsToNumber(hourMatch[1]) * 60;
+  return undefined;
+}
+
+function cleanCommandPhrases(raw: string): string {
+  return raw
+    .replace(/لطفاً|لطفا|برام|برای\s*من|ثبت\s*کن|ثبتش\s*کن|اضافه\s*کن|یادم\s*بنداز|یادآوری\s*کن|بگذار|بذار|بنویس|که|رویداد|کار\s*رو|فوری|اولویت\s*(بالا|متوسط|کم|پایین)/g, ' ')
+    .replace(/[:：،,.]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function resolveWeekdayDate(
   text: string,
   weekday: number,
@@ -195,6 +236,37 @@ export function parseUserIntent(input: string): AIIntentResult {
     return { intent: { action: 'show_today' }, confidence: 0.75, needsConfirmation: false };
   }
 
+  if (isAutoSchedule(text)) {
+    return {
+      intent: { action: 'auto_schedule_tasks' },
+      confidence: 0.9,
+      needsConfirmation: false,
+    };
+  }
+
+  // Detect updating priority / reminder / category of an existing task
+  if (/تغییر\s*بده|عوض\s*کن|بکن|قرار\s*بده|تنظیم\s*کن/.test(text) && /اولویت|یادآور|دسته/.test(text)) {
+    const newPriority = /اولویت/.test(text) ? extractPriority(text) : undefined;
+    const newReminder = /یادآور/.test(text) ? extractReminderMinutes(text) : undefined;
+    const newCategory = /دسته/.test(text) ? extractCategory(text) : undefined;
+    let targetTitle = text
+      .replace(/اولویت|یادآوری|یادآور|دسته‌بندی|دسته|کار|رو|را|به|روی|تغییر\s*بده|عوض\s*کن|بکن|قرار\s*بده|تنظیم\s*کن|بالا|مهم|متوسط|کم|پایین|فوری|شخصی|کاری|مالی|سلامت|تحصیلی|اجتماعی/g, ' ')
+      .replace(/\d+\s*(دقیقه|ساعت)\s*(قبل|زودتر)?/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return {
+      intent: {
+        action: 'update_task',
+        title: targetTitle || undefined,
+        priority: newPriority,
+        reminder: newReminder,
+        category: newCategory,
+      },
+      confidence: 0.85,
+      needsConfirmation: false,
+    };
+  }
+
   if (isCompleteTask(text)) {
     return {
       intent: { action: 'complete_task', text },
@@ -203,6 +275,10 @@ export function parseUserIntent(input: string): AIIntentResult {
     };
   }
 
+  const explicit = isExplicitCommand(text);
+  const priority = extractPriority(text);
+  const category = extractCategory(text);
+  const reminder = extractReminderMinutes(text);
   const recurrence = RECURRENCE_PATTERNS.find((r) => r.pattern.test(text));
   const time = extractTime(text);
   const dayOfMonth = extractDayOfMonth(text);
@@ -215,8 +291,7 @@ export function parseUserIntent(input: string): AIIntentResult {
     title = title.replace(/هر\s+(روز|شب|هفته|ماه|سال|شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|جمعه)/g, '');
     title = title.replace(/ماهانه|سالانه|روزانه/g, '');
     title = title.replace(/ساعت\s+[\u06F0-\u06F9]+|[0-9]+[:：][0-9]+/g, '');
-    title = title.replace(/[،,.]/g, ' ');
-    title = title.replace(/\s+/g, ' ').trim();
+    title = cleanCommandPhrases(title);
 
     if (!title || title.length < 2) {
       title = 'کار تکرارشونده';
@@ -225,6 +300,7 @@ export function parseUserIntent(input: string): AIIntentResult {
     const intent: AIIntent = {
       action: 'create_recurring_task',
       title,
+      priority,
       recurrence: recurrence.type,
       time: time || undefined,
       dayOfMonth: dayOfMonth || undefined,
@@ -246,7 +322,7 @@ export function parseUserIntent(input: string): AIIntentResult {
     return {
       intent,
       confidence: 0.85,
-      needsConfirmation: true,
+      needsConfirmation: !explicit,
       confirmationMessage,
     };
   }
@@ -259,9 +335,7 @@ export function parseUserIntent(input: string): AIIntentResult {
     title = title.replace(/پس\s*فردا|فردا|امروز/g, '');
     title = title.replace(/هفته\s*بعد|هفته\s*آینده|این\s*هفته/g, '');
     title = title.replace(/ساعت\s+[\u06F0-\u06F9]+|[0-9]+[:：][0-9]+/g, '');
-    title = title.replace(/با\s+\S+/g, '');
-    title = title.replace(/[،,.]/g, ' ');
-    title = title.replace(/\s+/g, ' ').trim();
+    title = cleanCommandPhrases(title);
 
     if (!title || title.length < 2) title = 'رویداد';
 
@@ -281,11 +355,14 @@ export function parseUserIntent(input: string): AIIntentResult {
         action: 'create_event',
         title,
         date: formatJalali(targetDate, 'short'),
+        startTime: time || '10:00',
         time: time || undefined,
         duration: duration || undefined,
+        category,
+        reminder,
       },
       confidence: 0.8,
-      needsConfirmation: true,
+      needsConfirmation: !explicit,
       confirmationMessage: `این یک رویداد است: ${title} در ${formatJalali(targetDate, 'long')}${time ? ' ساعت ' + toFaDigits(time) : ''}. ثبت کنم؟`,
     };
   }
@@ -294,8 +371,7 @@ export function parseUserIntent(input: string): AIIntentResult {
   title = title.replace(/پس\s*فردا|فردا|امروز/g, '');
   title = title.replace(/هفته\s*بعد|هفته\s*آینده|این\s*هفته/g, '');
   title = title.replace(/ساعت\s+[\u06F0-\u06F9]+|[0-9]+[:：][0-9]+/g, '');
-  title = title.replace(/[،,.]/g, ' ');
-  title = title.replace(/\s+/g, ' ').trim();
+  title = cleanCommandPhrases(title);
   if (!title || title.length < 2) title = 'کار';
 
   const today = getTodayJalali();
@@ -313,12 +389,15 @@ export function parseUserIntent(input: string): AIIntentResult {
     intent: {
       action: 'create_task',
       title,
+      priority,
+      category,
+      reminder,
       date: formatJalali(targetDate, 'short'),
       time: time || undefined,
       duration: duration || undefined,
     },
-    confidence: 0.7,
-    needsConfirmation: true,
+    confidence: 0.75,
+    needsConfirmation: !explicit,
     confirmationMessage: `این یک کار است: ${title} در ${formatJalali(targetDate, 'long')}${time ? ' ساعت ' + toFaDigits(time) : ''}. ثبت کنم؟`,
   };
 }

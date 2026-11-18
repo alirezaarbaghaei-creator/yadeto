@@ -1,4 +1,4 @@
-/*
+﻿/*
 # Fix RLS policies for custom PHP auth
 
 ## Problem
@@ -13,12 +13,12 @@ and tables with RLS enabled but NO policies are completely locked.
    (the PHP API layer handles authorization).
 2. Add full CRUD policies for `TO anon, authenticated` on tables that had RLS
    enabled but zero policies: `drafts`, `generated_letters`, `profiles`,
-   `discovery_usage`, `kateb_users`, `kateb_sessions`, `kateb_settings`,
-   `kateb_otp_codes`.
+   `discovery_usage`, `YADETO_users`, `YADETO_sessions`, `YADETO_settings`,
+   `YADETO_otp_codes`.
 3. Add INSERT/UPDATE/DELETE policies on `templates` (only SELECT existed).
 
 ## Security
-The PHP API layer (kateb-api edge function) handles authentication and authorization
+The PHP API layer (YADETO-api edge function) handles authentication and authorization
 by validating the Bearer token and scoping all queries to the authenticated user's ID.
 RLS is kept enabled as defense-in-depth, but policies allow anon+authenticated since
 the browser talks to Supabase directly with the anon key while the PHP API enforces
@@ -90,29 +90,29 @@ CREATE POLICY "anon_insert_discovery_usage" ON discovery_usage FOR INSERT TO ano
 CREATE POLICY "anon_update_discovery_usage" ON discovery_usage FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "anon_delete_discovery_usage" ON discovery_usage FOR DELETE TO anon, authenticated USING (true);
 
--- ─── kateb_users ──────────────────────────────────────────────
-CREATE POLICY "anon_select_kateb_users" ON kateb_users FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "anon_insert_kateb_users" ON kateb_users FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "anon_update_kateb_users" ON kateb_users FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "anon_delete_kateb_users" ON kateb_users FOR DELETE TO anon, authenticated USING (true);
+-- ─── YADETO_users ──────────────────────────────────────────────
+CREATE POLICY "anon_select_YADETO_users" ON YADETO_users FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "anon_insert_YADETO_users" ON YADETO_users FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "anon_update_YADETO_users" ON YADETO_users FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete_YADETO_users" ON YADETO_users FOR DELETE TO anon, authenticated USING (true);
 
--- ─── kateb_sessions ──────────────────────────────────────────
-CREATE POLICY "anon_select_kateb_sessions" ON kateb_sessions FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "anon_insert_kateb_sessions" ON kateb_sessions FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "anon_update_kateb_sessions" ON kateb_sessions FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "anon_delete_kateb_sessions" ON kateb_sessions FOR DELETE TO anon, authenticated USING (true);
+-- ─── YADETO_sessions ──────────────────────────────────────────
+CREATE POLICY "anon_select_YADETO_sessions" ON YADETO_sessions FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "anon_insert_YADETO_sessions" ON YADETO_sessions FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "anon_update_YADETO_sessions" ON YADETO_sessions FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete_YADETO_sessions" ON YADETO_sessions FOR DELETE TO anon, authenticated USING (true);
 
--- ─── kateb_settings ───────────────────────────────────────────
-CREATE POLICY "anon_select_kateb_settings" ON kateb_settings FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "anon_insert_kateb_settings" ON kateb_settings FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "anon_update_kateb_settings" ON kateb_settings FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "anon_delete_kateb_settings" ON kateb_settings FOR DELETE TO anon, authenticated USING (true);
+-- ─── YADETO_settings ───────────────────────────────────────────
+CREATE POLICY "anon_select_YADETO_settings" ON YADETO_settings FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "anon_insert_YADETO_settings" ON YADETO_settings FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "anon_update_YADETO_settings" ON YADETO_settings FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete_YADETO_settings" ON YADETO_settings FOR DELETE TO anon, authenticated USING (true);
 
--- ─── kateb_otp_codes ──────────────────────────────────────────
-CREATE POLICY "anon_select_kateb_otp_codes" ON kateb_otp_codes FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "anon_insert_kateb_otp_codes" ON kateb_otp_codes FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "anon_update_kateb_otp_codes" ON kateb_otp_codes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "anon_delete_kateb_otp_codes" ON kateb_otp_codes FOR DELETE TO anon, authenticated USING (true);
+-- ─── YADETO_otp_codes ──────────────────────────────────────────
+CREATE POLICY "anon_select_YADETO_otp_codes" ON YADETO_otp_codes FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "anon_insert_YADETO_otp_codes" ON YADETO_otp_codes FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "anon_update_YADETO_otp_codes" ON YADETO_otp_codes FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_delete_YADETO_otp_codes" ON YADETO_otp_codes FOR DELETE TO anon, authenticated USING (true);
 
 -- ─── templates (only SELECT existed) ──────────────────────────
 DROP POLICY IF EXISTS "select_all_templates" ON templates;

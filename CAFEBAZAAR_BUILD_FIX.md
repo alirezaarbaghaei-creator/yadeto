@@ -1,4 +1,4 @@
-# CafeBazaar build fix
+﻿# CafeBazaar build fix
 
 The release build was failing because `CafeBazaarBillingPlugin.java` imports
 `com.android.vending.billing.IInAppBillingService`, while the AIDL source was
@@ -20,7 +20,7 @@ Commit the AIDL file itself to Git:
 
 ```bash
 git add android/app/src/main/aidl/com/android/vending/billing/IInAppBillingService.aidl
-git add android/app/src/main/java/com/kateb/app/plugins/CafeBazaarBillingPlugin.java
+git add android/app/src/main/java/com/YADETO/app/plugins/CafeBazaarBillingPlugin.java
 git add android/app/build.gradle .github/workflows/android-apk.yml
 git commit -m "fix: include CafeBazaar AIDL in release build"
 git push
@@ -30,7 +30,7 @@ The workflow will then build:
 
 `android/app/build/outputs/apk/release/app-release.apk`
 
-and upload `Kateb-Android-Release` as a GitHub Actions artifact.
+and upload `YADETO-Android-Release` as a GitHub Actions artifact.
 
 The billing implementation currently uses the legacy CafeBazaar-compatible
 Binder/AIDL interface. For production payment behavior, test the complete

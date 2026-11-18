@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, ArrowRight, Check, BellRing, CalendarDays, ListTodo, Sparkles } from 'lucide-react';
@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, Check, BellRing, CalendarDays, ListTodo, Sparkle
  * First-run onboarding, shown exactly once before the login page on new
  * installs. The "seen" flag itself is written by the parent via safeStorage.
  */
-export const INTRO_SEEN_KEY = 'kateb_intro_v2_seen';
+export const INTRO_SEEN_KEY = 'YADETO_intro_v2_seen';
 
 interface Slide {
   Icon: LucideIcon;

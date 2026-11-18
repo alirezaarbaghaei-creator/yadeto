@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.kateb.app",
+      "package_name": "com.yadeto.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_YOUR_SIGNING_CERTIFICATE_SHA256_FINGERPRINT"
+        "7A:90:FC:58:11:E1:75:27:2F:FE:D0:00:A6:5D:1B:82:6E:CB:0A:B5:21:F5:A9:68:8E:D4:94:F6:BE:53:A3:2A"
       ]
     }
   }

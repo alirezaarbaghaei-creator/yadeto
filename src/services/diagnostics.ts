@@ -1,4 +1,4 @@
-/**
+﻿/**
  * In-app diagnostics for the CafeBazaar purchase flow.
  *
  * WHY THIS EXISTS: the checkout can fail on a real device where neither
@@ -29,7 +29,7 @@ export interface DiagEntry {
 /** Bump this on every diagnostic build so the tester can confirm what is installed. */
 export const DIAG_BUILD = '1.5.0 (release)';
 
-const STORAGE_KEY = 'kateb_diag_logs';
+const STORAGE_KEY = 'YADETO_diag_logs';
 const MAX_ENTRIES = 500;
 
 let entries: DiagEntry[] = [];
@@ -215,15 +215,15 @@ export function buildBaseReport(): string {
   const lines: string[] = [];
   const add = (s = '') => lines.push(s);
 
-  add('=== KATEB DIAGNOSTICS REPORT ===');
+  add('=== YADETO DIAGNOSTICS REPORT ===');
   add(`build        : ${DIAG_BUILD}`);
   add(`time         : ${new Date().toISOString()}`);
   add(`isNativeApp  : ${isNativeApp()}`);
   add(`origin       : ${window.location.origin}`);
   add(`href         : ${window.location.href}`);
   add(`userAgent    : ${navigator.userAgent}`);
-  add(`apiUrl       : ${safeGet('kateb_api_url') || '(default app.kateb.site)'}`);
-  add(`hasToken     : ${safeGet('kateb_token') ? 'yes' : 'no'}`);
+  add(`apiUrl       : ${safeGet('YADETO_api_url') || '(default app.YADETO.site)'}`);
+  add(`hasToken     : ${safeGet('YADETO_token') ? 'yes' : 'no'}`);
 
   const cap = (window as any).Capacitor;
   add(`capacitor    : ${cap ? `present, platform=${cap.getPlatform ? cap.getPlatform() : '?'}` : 'ABSENT'}`);

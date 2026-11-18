@@ -24,23 +24,23 @@ export function EventCard({ event, compact, onDelete, onEdit }: EventCardProps) 
 
   return (
     <div
-      className={`card-base flex overflow-hidden rounded-2xl ${
+      className={`card-base group flex overflow-hidden rounded-2xl transition-all hover:shadow-card-hover hover:border-slate-300/70 ${
         compact ? 'py-2' : ''
       }`}
     >
-      <div className="w-1 shrink-0" style={{ backgroundColor: eventColor }} />
-      <div className={`flex flex-1 items-center gap-2 ${compact ? 'px-3 py-1.5' : 'p-3'}`}>
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate text-right text-sm font-medium text-slate-700">{event.title}</p>
-          <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] text-slate-400">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
+      <div className="w-1.5 shrink-0" style={{ backgroundColor: eventColor }} />
+      <div className={`flex flex-1 items-center gap-2 ${compact ? 'px-3 py-1.5' : 'p-3.5'}`}>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className="truncate text-right text-sm font-semibold text-slate-800">{event.title}</p>
+          <div className="flex flex-wrap items-center justify-start gap-2.5 text-[11px] text-slate-500">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+              <Clock className="h-3 w-3 text-slate-400" />
               {toFaDigits(event.startTime)}
               {event.endTime ? ` - ${toFaDigits(event.endTime)}` : ''}
             </span>
             {event.location && (
-              <span className="flex max-w-[140px] items-center gap-1 truncate">
-                <MapPin className="h-3 w-3 shrink-0" />
+              <span className="inline-flex max-w-[160px] items-center gap-1 truncate text-slate-500">
+                <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
                 <span className="truncate">{event.location}</span>
               </span>
             )}

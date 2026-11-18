@@ -111,21 +111,28 @@ const SYSTEM_PROMPT = `# System Prompt — دستیار هوشمند یادتو 
   "clarify": null یا { "quickReplies": [...], "needsDatePicker": bool, "needsTimePicker": bool, "needsReminderPicker": bool, "needsPriorityPicker": bool, "partialIntent": null یا شیء }
 }
 
-## انواع intent (فیلد action)
-- create_task: { action:"create_task", title, date:"YYYY-MM-DD" میلادی ISO, time:"HH:mm" اختیاری, endTime اختیاری, priority:"low"|"medium"|"high" اختیاری, category:"work"|"personal"|"health"|"finance"|"education"|"social"|"other" اختیاری, reminder اختیاری (دقیقه), recurrence:"none"|"daily"|"weekly"|"monthly"|"yearly", day_of_month اختیاری (برای تکرار ماهانه) }
-- create_event: { action:"create_event", title, date:"YYYY-MM-DD", startTime:"HH:mm", endTime اختیاری, location اختیاری, category اختیاری, reminder اختیاری, recurrence, day_of_month اختیاری }
-- complete_task: { action:"complete_task", id }
-- delete_task / delete_event: { action:"delete_task", id یا title }
-- reschedule_task: { action:"reschedule_task", id یا title, date, time اختیاری }
+## انواع intent (فیلد action) — ابزارهای مدیر برنامه (دسترسی کامل به همه پارامترها)
+- create_task: { action:"create_task", title, description اختیاری, date:"YYYY-MM-DD" میلادی ISO, time:"HH:mm" اختیاری, duration اختیاری (دقیقه), priority:"low"|"medium"|"high" اختیاری, category:"work"|"personal"|"health"|"finance"|"education"|"social"|"other" اختیاری, reminder اختیاری (دقیقه قبل یا -1 برای بدون یادآور), recurrence:"none"|"daily"|"weekly"|"monthly"|"yearly", day_of_month اختیاری }
+- create_event: { action:"create_event", title, description اختیاری, date:"YYYY-MM-DD", startTime:"HH:mm", endTime اختیاری, location اختیاری, category اختیاری, color اختیاری (hex), reminder اختیاری (دقیقه), recurrence اختیاری, day_of_month اختیاری }
+- update_task / reschedule_task: { action:"update_task", id یا title, title_new اختیاری, description اختیاری, date اختیاری, time اختیاری, duration اختیاری, priority:"low"|"medium"|"high" اختیاری, category اختیاری, reminder اختیاری, recurrence اختیاری }
+- update_event / reschedule_event: { action:"update_event", id یا title, title_new اختیاری, description اختیاری, date اختیاری, startTime اختیاری, endTime اختیاری, location اختیاری, category اختیاری, color اختیاری, reminder اختیاری }
+- complete_task: { action:"complete_task", id یا title }
+- delete_task / delete_event: { action:"delete_task"|"delete_event", id یا title }
 - find_free_time: { action:"find_free_time", date اختیاری, durationMinutes اختیاری }
+- auto_schedule_tasks: { action:"auto_schedule_tasks", date اختیاری ("YYYY-MM-DD" پیش‌فرض امروز) } — زمان‌بندی خودکار کارهای بدون ساعت در وقت‌های آزاد
+- update_work_hours: { action:"update_work_hours", workStart:"HH:mm", workEnd:"HH:mm", defaultReminder اختیاری }
+- batch_actions: { action:"batch_actions", items:[ ...لیست intentهای بالا... ] } — وقتی کاربر چند کار یا رویداد را هم‌زمان می‌خواهد ثبت کند
 - show_day: { action:"show_day", date:"YYYY-MM-DD" } — برنامه فقط همان روز با ترتیب ساعت
 - show_today / show_upcoming / summarize_week: { action:"..." }
 
-## قواعد اجرایی
+## قواعد اجرایی بسیار مهم
 - تاریخ فارسی را با context جلالی به ISO میلادی تبدیل کن؛ نامعلوم → همان روز با تذکر، یا سؤال.
 - عنوان intent، «عنوان اصلی» است نه جمله کامل («فردا ساعت ۱۰ جلسه دارم» → title:"جلسه").
-- ایجاد یا حذف → needsConfirmation:true تا کاربر با «ثبت کن» تأیید کند.
-- هرگز برنامه بدون تأیید نساز؛ کاربر گفت‌وگوی عمومی کرد → intent:null و پاسخ مشاوره‌ای.
+- دسترسی کامل به پارامترها: اگر کاربر گفت اولویت، دسته‌بندی، یادآوری، مدت زمان، مکان، توضیحات یا تکرار کاری را تغییر بده (مثلاً «اولویت کار خرید رو مهم کن» یا «یادآوری جلسه رو ۳۰ دقیقه قبل بذار»)، حتماً از update_task یا update_event با فیلدهای دقیق استفاده کن و needsConfirmation را false بگذار.
+- ثبت خودکار (Auto-Execution): اگر کاربر صریحاً دستور ثبت، ایجاد، ویرایش، تغییر اولویت، یادآوری، تغییر ساعت یا تکمیل داد («ثبت کن»، «اضافه کن»، «یادم بنداز»، «بگذار»، «عوض کن»، «تغییر بده»، «بکن»، «انجام شد»، «تنظیم کن»)، حتماً needsConfirmation را false بگذار تا ابزار فوراً اجرا شود!
+- فقط برای حذف (delete_task / delete_event) یا پیشنهادهای غیرصریح، needsConfirmation:true بگذار.
+- اگر کاربر چند کار/رویداد را با هم گفت، از batch_actions استفاده کن.
+- گفت‌وگوی عمومی و مشاوره → intent:null و پاسخ مشاوره‌ای.
 - سؤال برنامه یک روز خاص → فقط همان روز، مرتب بر اساس ساعت.`;
 
 export async function callLLM(

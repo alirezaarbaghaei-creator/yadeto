@@ -1,8 +1,8 @@
-/*
+﻿/*
 # Add Monetization & Pricing System
 
 ## Overview
-This migration adds a complete subscription and plan-based monetization system to the Kateb app.
+This migration adds a complete subscription and plan-based monetization system to the YADETO app.
 It introduces pricing plans (Free, Pay-As-You-Go, Pro, Business), tracks active subscriptions
 per user, and records plan purchase transactions.
 
@@ -11,7 +11,7 @@ per user, and records plan purchase transactions.
 ### `subscriptions`
 Tracks each user's active or expired subscription to a pricing plan.
 - `id` (uuid PK)
-- `user_id` (uuid, references kateb_users)
+- `user_id` (uuid, references YADETO_users)
 - `plan_id` (text: 'free' | 'payg' | 'pro' | 'business')
 - `status` (text: 'active' | 'expired' | 'cancelled')
 - `credits_remaining` (integer, remaining letter credits for this subscription)
@@ -26,7 +26,7 @@ Tracks each user's active or expired subscription to a pricing plan.
 ### `plan_transactions`
 Records every plan purchase attempt (success or failure).
 - `id` (uuid PK)
-- `user_id` (uuid, references kateb_users)
+- `user_id` (uuid, references YADETO_users)
 - `plan_id` (text)
 - `amount_toman` (integer)
 - `status` (text: 'pending' | 'paid' | 'failed')
@@ -37,7 +37,7 @@ Records every plan purchase attempt (success or failure).
 
 ## Modified Tables
 
-### `kateb_users`
+### `YADETO_users`
 - Added `plan_type` column (text, default 'free') — current active plan
 - Added `credits_remaining` column (integer, default 3) — free credits on signup
 
@@ -47,21 +47,21 @@ Records every plan purchase attempt (success or failure).
 - 4 separate policies per table (SELECT, INSERT, UPDATE, DELETE).
 */
 
--- ─── Add columns to kateb_users ─────────────────────────────────
+-- ─── Add columns to YADETO_users ─────────────────────────────────
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'kateb_users' AND column_name = 'plan_type') THEN
-    ALTER TABLE kateb_users ADD COLUMN plan_type text NOT NULL DEFAULT 'free';
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'YADETO_users' AND column_name = 'plan_type') THEN
+    ALTER TABLE YADETO_users ADD COLUMN plan_type text NOT NULL DEFAULT 'free';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'kateb_users' AND column_name = 'credits_remaining') THEN
-    ALTER TABLE kateb_users ADD COLUMN credits_remaining integer NOT NULL DEFAULT 3;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'YADETO_users' AND column_name = 'credits_remaining') THEN
+    ALTER TABLE YADETO_users ADD COLUMN credits_remaining integer NOT NULL DEFAULT 3;
   END IF;
 END $$;
 
 -- ─── subscriptions table ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES kateb_users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES YADETO_users(id) ON DELETE CASCADE,
   plan_id text NOT NULL DEFAULT 'free',
   status text NOT NULL DEFAULT 'active',
   credits_remaining integer NOT NULL DEFAULT 0,
@@ -98,7 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 -- ─── plan_transactions table ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS plan_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES kateb_users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES YADETO_users(id) ON DELETE CASCADE,
   plan_id text NOT NULL,
   amount_toman integer NOT NULL DEFAULT 0,
   status text NOT NULL DEFAULT 'pending',

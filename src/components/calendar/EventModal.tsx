@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Clock, MapPin, Palette, CalendarPlus } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock, MapPin, Palette, CalendarPlus, BellRing } from 'lucide-react';
 import type { CalendarEvent, TaskCategory, MJalaliDate } from '@/types/calendar';
 import { MiniCalendar, toISO } from './MiniCalendar';
 import { getTodayJalali, isoDateToJalali, formatJalali } from '@/utils/jalaliDate';
+import { scheduleEventReminder, requestNotificationPermissions } from '@/services/calendar/notifications';
 
 interface EventModalProps {
   open: boolean;
@@ -41,6 +42,16 @@ const COLORS: { value: string; label: string }[] = [
   { value: '#8b5cf6', label: 'یاسی' },
 ];
 
+const REMINDER_OPTIONS: { value: number; label: string }[] = [
+  { value: -1, label: 'بدون یادآوری' },
+  { value: 0, label: 'در لحظه شروع' },
+  { value: 5, label: '۵ دقیقه قبل' },
+  { value: 15, label: '۱۵ دقیقه قبل' },
+  { value: 30, label: '۳۰ دقیقه قبل' },
+  { value: 60, label: '۱ ساعت قبل' },
+  { value: 1440, label: '۱ روز قبل' },
+];
+
 export function EventModal({ open, onClose, onSave, event, defaultDate }: EventModalProps) {
   const [title, setTitle] = useState('');
   const [selectedJalali, setSelectedJalali] = useState<MJalaliDate>(getTodayJalali());
@@ -50,6 +61,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState<TaskCategory>('work');
   const [color, setColor] = useState('#4f46e5');
+  const [reminder, setReminder] = useState<number>(15);
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
@@ -68,6 +80,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
     setLocation(event?.location || '');
     setCategory(event?.category || 'work');
     setColor(event?.color || '#4f46e5');
+    setReminder(event?.reminder ?? 15);
     setShowCalendar(false);
   }, [open, event, defaultDate]);
 
@@ -75,15 +88,20 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
 
   const handleSave = () => {
     if (!title.trim()) return;
+    const date = toISO(selectedJalali);
+    if (reminder >= 0) {
+      void requestNotificationPermissions();
+      void scheduleEventReminder(title.trim(), date, startTime, reminder);
+    }
     onSave({
       title: title.trim(),
-      date: toISO(selectedJalali),
+      date,
       startTime,
       endTime: hasEndTime ? endTime : undefined,
       location: location.trim() || undefined,
       category,
       color,
-      reminder: 15,
+      reminder,
     });
     onClose();
   };
@@ -248,6 +266,25 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                   }`}
                   style={{ backgroundColor: c.value }}
                 />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 flex items-center gap-1 text-xs text-slate-500">
+              <BellRing className="h-3.5 w-3.5 text-amber-500" />
+              یادآوری و آلارم
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {REMINDER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setReminder(opt.value)}
+                  className={chip(reminder === opt.value, 'border-amber-400 bg-amber-50 text-amber-800')}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
           </div>

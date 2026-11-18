@@ -1,11 +1,11 @@
-package com.kateb.app;
+package com.yadeto.app;
 
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
-import com.kateb.app.plugins.CafeBazaarBillingPlugin;
-import com.kateb.app.plugins.DownloadsPlugin;
-import com.kateb.app.plugins.OtpAutofillPlugin;
+import com.yadeto.app.plugins.CafeBazaarBillingPlugin;
+import com.yadeto.app.plugins.DownloadsPlugin;
+import com.yadeto.app.plugins.OtpAutofillPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override

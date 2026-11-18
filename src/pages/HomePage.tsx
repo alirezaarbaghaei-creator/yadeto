@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Sparkles, Plus, Clock, ListTodo, CalendarDays, Coffee } from 'lucide-react';
 import { useCalendarStore } from '@/store/calendarStore';
+import { useAppStore } from '@/store/appStore';
 import type { Task } from '@/types/calendar';
 import { getTodaySchedule, formatFreeTime, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { calendarAi } from '@/services/calendar/calendarAi';

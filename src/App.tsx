@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Sidebar, BottomNav } from '@/components/Navigation';
@@ -16,6 +16,8 @@ import { PaymentResult } from '@/pages/PaymentResult';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
+import { AlarmOverlay } from '@/components/AlarmOverlay';
+import { startReminderWatcher } from '@/services/calendar/notifications';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCalendarStore } from '@/store/calendarStore';
@@ -69,6 +71,37 @@ function AppShell() {
     };
   }, []);
 
+  // Watch tasks & events for due reminder alarms & notifications
+  useEffect(() => {
+    return startReminderWatcher(() => {
+      const state = useCalendarStore.getState();
+      const prefs = state.preferences;
+      if (prefs && prefs.notificationsEnabled === false) return [];
+      const defaultMin = prefs?.defaultReminder ?? 15;
+      const items = [
+        ...state.tasks
+          .filter((t) => t.status === 'pending' && t.dueTime)
+          .map((t) => ({
+            id: t.id,
+            title: t.title,
+            date: t.dueDate,
+            time: t.dueTime,
+            reminder: t.reminder ?? defaultMin,
+            kind: 'task' as const,
+          })),
+        ...state.events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          date: e.date,
+          time: e.startTime,
+          reminder: e.reminder ?? defaultMin,
+          kind: 'event' as const,
+        })),
+      ];
+      return items;
+    });
+  }, []);
+
   // Load calendar data (local-first; cloud sync kicks in when a session exists)
   useEffect(() => {
     if (!loaded) {
@@ -84,7 +117,7 @@ function AppShell() {
     if (!parsed) return;
     let { pathname, search } = parsed;
 
-    // Normalize kateb://payment/callback → /payment/callback
+    // Normalize YADETO://payment/callback → /payment/callback
     if (pathname === '/callback') pathname = '/payment/callback';
     if (pathname === '/result') pathname = '/payment/result';
 
@@ -188,8 +221,8 @@ function AppShell() {
       <Sidebar />
       <MobileHeader />
 
-      <main className="relative lg:mr-64">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 pb-32 lg:pb-10">
+      <main className="relative lg:mr-72">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-32 lg:pb-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPage}
@@ -207,6 +240,7 @@ function AppShell() {
       <BottomNav />
       <QuickAddModal />
       <UpgradeModal />
+      <AlarmOverlay />
     </div>
   );
 }
