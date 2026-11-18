@@ -1,5 +1,6 @@
 package com.yadeto.app;
 
+import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -19,6 +20,8 @@ public final class YadetoStatusHelper {
     public static final String KEY_SUMMARY = "summaryLine";
     public static final String KEY_DETAILS = "detailsText";
     public static final String KEY_STICKY = "stickyEnabled";
+    public static final String KEY_ALARM_SOUND = "alarmSound";
+    public static final String KEY_ALARM_VIBRATE = "alarmVibrate";
 
     private static final String CHANNEL_ID = "yadeto_daily_status";
     private static final int NOTIFICATION_ID = 90210;
@@ -112,6 +115,74 @@ public final class YadetoStatusHelper {
         int[] quickIds = manager.getAppWidgetIds(quickComp);
         if (quickIds != null && quickIds.length > 0) {
             YadetoQuickWidgetProvider.updateWidgets(context, manager, quickIds);
+        }
+    }
+
+    public static void saveAlarmPrefs(Context context, String soundId, boolean vibrate) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+            .putString(KEY_ALARM_SOUND, soundId)
+            .putBoolean(KEY_ALARM_VIBRATE, vibrate)
+            .apply();
+    }
+
+    public static void scheduleExactAlarm(
+        Context context,
+        int alarmId,
+        String title,
+        String body,
+        long triggerAtMillis,
+        String soundId,
+        boolean vibrate
+    ) {
+        if (triggerAtMillis <= System.currentTimeMillis()) return;
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+
+        Intent intent = new Intent(context, YadetoAlarmReceiver.class);
+        intent.putExtra("alarmId", alarmId);
+        intent.putExtra("title", title);
+        intent.putExtra("body", body);
+        intent.putExtra("soundId", soundId);
+        intent.putExtra("vibrate", vibrate);
+
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context,
+            alarmId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (am.canScheduleExactAlarms()) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+                } else {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            }
+        } catch (SecurityException ignored) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+        }
+    }
+
+    public static void cancelScheduledAlarm(Context context, int alarmId) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent intent = new Intent(context, YadetoAlarmReceiver.class);
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context,
+            alarmId,
+            intent,
+            PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+        );
+        if (pi != null) {
+            am.cancel(pi);
+            pi.cancel();
         }
     }
 }

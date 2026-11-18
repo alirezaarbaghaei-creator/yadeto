@@ -117,6 +117,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Exact background alarm receiver & foreground alarm service -->
+        <receiver
+            android:name=".YadetoAlarmReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".YadetoAlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
     </application>
 
     <!-- Permissions -->
@@ -128,6 +138,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- FIX (pay): CafeBazaar in-app billing REQUIRES this permission. Without it the
          system refuses to bind our process to Bazaar's billing service, so

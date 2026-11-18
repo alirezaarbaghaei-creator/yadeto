@@ -23,6 +23,30 @@ export const ALARM_SOUNDS: { id: AlarmSoundId; label: string; desc: string }[] =
 const ALARM_SOUND_KEY = 'YADETO_alarm_sound';
 const ALARM_VIBRATE_KEY = 'YADETO_alarm_vibrate';
 
+function getYadetoStatusPlugin() {
+  if (typeof window === 'undefined') return null;
+  const cap = (window as unknown as {
+    Capacitor?: {
+      Plugins?: {
+        YadetoStatus?: {
+          saveAlarmPrefs?: (opts: { soundId: string; vibrate: boolean }) => Promise<void>;
+          scheduleAlarm?: (opts: {
+            alarmId: number;
+            title: string;
+            body: string;
+            triggerAtMs: number;
+            soundId: string;
+            vibrate: boolean;
+          }) => Promise<void>;
+          cancelAlarm?: (opts: { alarmId: number }) => Promise<void>;
+          stopActiveAlarm?: () => Promise<void>;
+        };
+      };
+    };
+  }).Capacitor;
+  return cap?.Plugins?.YadetoStatus ?? null;
+}
+
 export function getSavedAlarmSound(): AlarmSoundId {
   const raw = getItem(ALARM_SOUND_KEY);
   if (raw === 'classic' || raw === 'chime' || raw === 'digital' || raw === 'marimba') return raw;
@@ -31,6 +55,10 @@ export function getSavedAlarmSound(): AlarmSoundId {
 
 export function setSavedAlarmSound(id: AlarmSoundId): void {
   setItem(ALARM_SOUND_KEY, id);
+  void getYadetoStatusPlugin()?.saveAlarmPrefs?.({
+    soundId: id,
+    vibrate: getAlarmVibrationEnabled(),
+  });
 }
 
 export function getAlarmVibrationEnabled(): boolean {
@@ -39,6 +67,10 @@ export function getAlarmVibrationEnabled(): boolean {
 
 export function setAlarmVibrationEnabled(enabled: boolean): void {
   setItem(ALARM_VIBRATE_KEY, enabled ? '1' : '0');
+  void getYadetoStatusPlugin()?.saveAlarmPrefs?.({
+    soundId: getSavedAlarmSound(),
+    vibrate: enabled,
+  });
 }
 
 export interface ActiveAlarm {
@@ -155,6 +187,7 @@ export function stopAlarmLoop(): void {
       /* ignore */
     }
   }
+  void getYadetoStatusPlugin()?.stopActiveAlarm?.();
 }
 
 export function triggerAlarm(title: string, body: string): void {
@@ -307,6 +340,22 @@ export async function scheduleReminder(
   if (await nativeAvailable()) {
     const granted = await requestNotificationPermissions();
     if (!granted) return null;
+    const statusPlugin = getYadetoStatusPlugin();
+    if (statusPlugin?.scheduleAlarm) {
+      try {
+        await statusPlugin.scheduleAlarm({
+          alarmId: numericId(id),
+          title,
+          body,
+          triggerAtMs: trigger.getTime(),
+          soundId: getSavedAlarmSound(),
+          vibrate: getAlarmVibrationEnabled(),
+        });
+        return id;
+      } catch (e) {
+        console.warn('[SmartCalendar] native AlarmManager schedule failed, falling back', e);
+      }
+    }
     try {
       await nativeSchedule(numericId(id), title, body, trigger);
       return id;

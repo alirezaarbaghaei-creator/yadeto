@@ -11,13 +11,15 @@ export function MobileHeader({ anonymous = false }: { anonymous?: boolean }) {
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-slate-200/50">
       <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-700 to-primary-900 shadow-md shadow-primary-900/20">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/logo.png"
+            alt="Yadeto"
+            className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-primary-100 bg-white"
+          />
           <div>
             <h1 className="text-base font-bold leading-none text-slate-900">یادتو</h1>
-            <p className="mt-0.5 text-[10px] text-slate-500">همراه هوشمند زندگی تو</p>
+            <p className="mt-0.5 text-[10px] text-primary-600 font-medium">مدیر برنامه هوشمند</p>
           </div>
         </div>
 

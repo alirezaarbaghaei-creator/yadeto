@@ -46,12 +46,13 @@ function useNavItems(): NavItem[] {
 
 function BrandLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const dims = size === 'lg' ? 'h-12 w-12' : size === 'sm' ? 'h-9 w-9' : 'h-11 w-11';
-  const iconSize = size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
 
   return (
-    <div className={`flex ${dims} shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 shadow-lg shadow-primary-900/20`}>
-      <Sparkles className={`${iconSize} text-white`} />
-    </div>
+    <img
+      src="/logo.png"
+      alt="Yadeto"
+      className={`${dims} shrink-0 rounded-2xl object-cover shadow-md shadow-primary-900/15 border border-primary-100/80 bg-white`}
+    />
   );
 }
 
