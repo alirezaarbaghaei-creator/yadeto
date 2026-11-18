@@ -28,6 +28,26 @@ export async function initPushNotifications(): Promise<PushNotificationSetupResu
     return { granted: false };
   }
 
+  // Guard against APKs built without google-services.json (FirebaseApp not initialized):
+  // calling PushNotifications.register() without Firebase throws an uncaught native
+  // IllegalStateException on a background thread and crashes the app on launch.
+  try {
+    const cap = (window as unknown as {
+      Capacitor?: { Plugins?: { Downloads?: { isFirebaseConfigured?: () => Promise<{ configured?: boolean }> } } };
+    }).Capacitor;
+    const check = cap?.Plugins?.Downloads?.isFirebaseConfigured;
+    if (typeof check === 'function') {
+      const res = await check();
+      if (!res?.configured) {
+        console.info('[Push] Firebase not configured in this APK — skipping FCM registration');
+        return { granted: false };
+      }
+    }
+  } catch (err) {
+    console.warn('[Push] Firebase config check failed, skipping FCM registration', err);
+    return { granted: false };
+  }
+
   const { PushNotifications } = await import(
     /* @vite-ignore */ '@capacitor/push-notifications'
   );

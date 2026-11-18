@@ -1,6 +1,6 @@
 {
 	"appId": "com.yadeto.app",
-	"appName": "یادتو",
+	"appName": "Yadeto",
 	"webDir": "dist",
 	"android": {
 		"allowMixedContent": false,

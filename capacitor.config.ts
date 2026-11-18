@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.yadeto.app',
-  appName: 'یادتو',
+  appName: 'Yadeto',
   webDir: 'dist',
   android: {
     allowMixedContent: false,

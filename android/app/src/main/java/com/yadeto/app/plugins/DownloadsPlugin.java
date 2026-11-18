@@ -381,6 +381,18 @@ public class DownloadsPlugin extends Plugin {
         }
     }
 
+    @PluginMethod
+    public void isFirebaseConfigured(PluginCall call) {
+        int resId = getContext().getResources().getIdentifier(
+            "google_app_id",
+            "string",
+            getContext().getPackageName()
+        );
+        JSObject ret = new JSObject();
+        ret.put("configured", resId != 0);
+        call.resolve(ret);
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────
     /**
      * Reduces an arbitrary JS-supplied name to a safe single path segment and
