@@ -13,11 +13,10 @@ import { AccountPage } from '@/pages/AccountPage';
 import { PricingPage } from '@/pages/PricingPage';
 import { PaymentCallback } from '@/pages/PaymentCallback';
 import { PaymentResult } from '@/pages/PaymentResult';
-import { OfflineBanner } from '@/components/OfflineBanner';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { AlarmOverlay } from '@/components/AlarmOverlay';
-import { startReminderWatcher } from '@/services/calendar/notifications';
+import { startReminderWatcher, requestNotificationPermissions } from '@/services/calendar/notifications';
 import { syncAndroidStatusAndWidgets } from '@/services/calendar/androidStatus';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -73,6 +72,23 @@ function AppShell() {
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
+
+  // Request notification permission on startup so sticky status bar & alarms work immediately
+  useEffect(() => {
+    requestNotificationPermissions()
+      .then((granted) => {
+        if (granted) {
+          const st = useCalendarStore.getState();
+          void syncAndroidStatusAndWidgets(
+            st.tasks,
+            st.events,
+            st.preferences?.workStart ?? '08:00',
+            st.preferences?.workEnd ?? '20:00',
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Initialize FCM push notifications on native (Android) builds.
   useEffect(() => {
@@ -223,7 +239,6 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <OfflineBanner />
       {/* Ambient background blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary-200/25 blur-3xl" />

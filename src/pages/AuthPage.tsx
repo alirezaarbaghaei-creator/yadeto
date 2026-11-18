@@ -282,12 +282,14 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
         <div className="card-premium rounded-3xl p-8">
           {/* Brand identity */}
           <div className="flex flex-col items-center mb-8">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-950 shadow-lg shadow-primary-900/25 mb-4">
-              <Sparkles className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">یادتو</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'همراه هوشمند زندگی تو'}
+            <img
+              src="/logo.png"
+              alt="Yadeto"
+              className="h-20 w-20 rounded-3xl object-cover shadow-xl shadow-primary-900/15 border border-primary-100 bg-white mb-4"
+            />
+            <h1 className="text-2xl font-extrabold text-slate-900">Yadeto</h1>
+            <p className="text-sm text-primary-600 font-medium mt-1">
+              {assistantOnly ? 'برای گفتگو با دستیار وارد شو' : 'تقویم و مدیر برنامه هوشمند'}
             </p>
           </div>
 
