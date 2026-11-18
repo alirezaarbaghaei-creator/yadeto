@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -72,6 +73,10 @@ import java.util.Locale;
         @Permission(
             alias = "storage",
             strings = { Manifest.permission.WRITE_EXTERNAL_STORAGE }
+        ),
+        @Permission(
+            alias = "microphone",
+            strings = { Manifest.permission.RECORD_AUDIO }
         )
     }
 )
@@ -390,6 +395,24 @@ public class DownloadsPlugin extends Plugin {
         );
         JSObject ret = new JSObject();
         ret.put("configured", resId != 0);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestMicrophonePermission(PluginCall call) {
+        if (getPermissionState("microphone") == PermissionState.GRANTED) {
+            JSObject ret = new JSObject();
+            ret.put("granted", true);
+            call.resolve(ret);
+        } else {
+            requestPermissionForAlias("microphone", call, "microphonePermsCallback");
+        }
+    }
+
+    @PermissionCallback
+    private void microphonePermsCallback(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("granted", getPermissionState("microphone") == PermissionState.GRANTED);
         call.resolve(ret);
     }
 

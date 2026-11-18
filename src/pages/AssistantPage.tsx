@@ -20,7 +20,10 @@ import {
   Coffee,
   Repeat,
   Tag,
+  WifiOff,
+  Moon,
 } from 'lucide-react';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useCalendarStore } from '@/store/calendarStore';
 import { usePlanStore } from '@/store/planStore';
 import { useAuthStore } from '@/store/authStore';
@@ -212,6 +215,7 @@ export function AssistantPage() {
   const incrementTemplate = usePlanStore((s) => s.incrementTemplate);
   const openUpgradeModal = usePlanStore((s) => s.openUpgradeModal);
   const consumePendingAiPrompt = useAppStore((s) => s.consumePendingAiPrompt);
+  const isOnline = useOnlineStatus();
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const stored = loadStoredMessages();
@@ -982,6 +986,16 @@ export function AssistantPage() {
         }
       }
 
+      if (!isOnline || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        setThinking(false);
+        pushMessage({
+          role: 'assistant',
+          content:
+            'دستیار الان خوابه! 😴\n\nبرای گفتگو با دستیار هوشمند، گوشی باید به اینترنت متصل باشه. اما تقویم، کارها، رویدادها و آلارم‌ها در حالت آفلاین هم کامل کار می‌کنن.',
+        });
+        return;
+      }
+
       const contextMessages = [
         ...messages
           .filter((m) => !m.actions || m.actions.length === 0)
@@ -1000,11 +1014,14 @@ export function AssistantPage() {
       });
 
       if (!llmResponse || isLLMError(llmResponse)) {
-        const fallbackMsg = await runLocalFallback(text);
         setThinking(false);
-        if (fallbackMsg.content) {
-          pushMessage(fallbackMsg);
-        }
+        const isNotConfigured = isLLMError(llmResponse) && llmResponse.notConfigured;
+        pushMessage({
+          role: 'assistant',
+          content: isNotConfigured
+            ? 'سرویس هوش مصنوعی از پنل مدیریت هنوز تنظیم نشده است.'
+            : 'دستیار الان خوابه! 😴\n\nاتصال به سرور هوش مصنوعی برقرار نشد. لطفاً اینترنت خود را بررسی کنید و دوباره تلاش کنید.',
+        });
         return;
       }
 
@@ -1115,7 +1132,7 @@ export function AssistantPage() {
 
   const silenceTimerRef = useRef<number | null>(null);
 
-  const toggleListening = useCallback(() => {
+  const toggleListening = useCallback(async () => {
     setVoiceError(null);
     if (isListening) {
       if (silenceTimerRef.current) {
@@ -1125,6 +1142,23 @@ export function AssistantPage() {
       recognitionRef.current?.stop();
       setIsListening(false);
       return;
+    }
+
+    // Request native Android microphone permission if running inside Capacitor APK
+    try {
+      const cap = (window as unknown as {
+        Capacitor?: { Plugins?: { Downloads?: { requestMicrophonePermission?: () => Promise<{ granted?: boolean }> } } };
+      }).Capacitor;
+      const reqMic = cap?.Plugins?.Downloads?.requestMicrophonePermission;
+      if (typeof reqMic === 'function') {
+        const perm = await reqMic();
+        if (!perm?.granted) {
+          setVoiceError('دسترسی میکروفون داده نشد. لطفاً از تنظیمات گوشی مجوز میکروفون را فعال کنید.');
+          return;
+        }
+      }
+    } catch {
+      /* continue to web speech check */
     }
 
     const Ctor = getSpeechRecognitionCtor();
@@ -1356,6 +1390,24 @@ export function AssistantPage() {
           )}
         </div>
       </div>
+
+      {/* Offline sleep banner */}
+      {!isOnline && (
+        <div className="mb-2.5 flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+            <Moon className="h-4 w-4" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold flex items-center gap-1.5">
+              دستیار الان خوابه! 😴
+              <WifiOff className="h-3.5 w-3.5 text-amber-600" />
+            </p>
+            <p className="text-[11px] text-amber-700 mt-0.5">
+              برای بیدار شدن و گفتگو با دستیار به اینترنت نیاز دارید (تقویم، کارها و آلارم آفلاین فعال‌اند).
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Live Program Manager Context Strip */}
       <div className="mb-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">

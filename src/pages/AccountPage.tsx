@@ -15,7 +15,19 @@ import {
   Sparkles,
   Bell,
   Shield,
+  Volume2,
+  Vibrate,
 } from 'lucide-react';
+import {
+  ALARM_SOUNDS,
+  getSavedAlarmSound,
+  setSavedAlarmSound,
+  getAlarmVibrationEnabled,
+  setAlarmVibrationEnabled,
+  previewAlarmSound,
+  requestNotificationPermissions,
+  type AlarmSoundId,
+} from '@/services/calendar/notifications';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { usePlanStore } from '@/store/planStore';
@@ -45,6 +57,9 @@ export function AccountPage() {
   const [saved, setSaved] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
   const [error, setError] = useState('');
+  const [alarmSound, setAlarmSound] = useState<AlarmSoundId>(() => getSavedAlarmSound());
+  const [vibration, setVibration] = useState<boolean>(() => getAlarmVibrationEnabled());
+  const [notifStatus, setNotifStatus] = useState<string>('');
 
   const aiLimit = getAiAssistantLimit();
   const templateLimit = getTemplateLimit();
@@ -263,6 +278,79 @@ export function AccountPage() {
               {savingPassword ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'تغییر رمز عبور'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Alarm & Notification settings */}
+      <div className="card-base rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-amber-500" />
+            <h3 className="text-sm font-bold text-slate-900">تنظیمات آلارم و یادآوری</h3>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const ok = await requestNotificationPermissions();
+              setNotifStatus(ok ? 'مجوز اعلان‌ها فعال است.' : 'مجوز اعلان‌ها داده نشد.');
+            }}
+            className="rounded-xl bg-primary-50 px-3 py-1.5 text-[11px] font-semibold text-primary-700 hover:bg-primary-100 transition-colors"
+          >
+            بررسی مجوز اعلان
+          </button>
+        </div>
+
+        {notifStatus && <p className="text-xs text-accent-700">{notifStatus}</p>}
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate-600">صدای آلارم پیش‌فرض</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {ALARM_SOUNDS.map((s) => {
+              const active = alarmSound === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setAlarmSound(s.id);
+                    setSavedAlarmSound(s.id);
+                    previewAlarmSound(s.id);
+                  }}
+                  className={`flex items-center justify-between rounded-xl border p-3 text-right transition-all ${
+                    active
+                      ? 'border-primary-500 bg-primary-50/70 text-primary-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs font-bold">{s.label}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{s.desc}</p>
+                  </div>
+                  <Volume2 className={`h-4 w-4 shrink-0 ${active ? 'text-primary-600' : 'text-slate-400'}`} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-surface/60 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <Vibrate className="h-4 w-4 text-slate-500" />
+            <span className="text-xs font-semibold text-slate-700">لرزش گوشی هنگام آلارم</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !vibration;
+              setVibration(next);
+              setAlarmVibrationEnabled(next);
+            }}
+            className={`rounded-full px-3 py-1 text-[11px] font-bold transition-colors ${
+              vibration ? 'bg-accent-600 text-white' : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            {vibration ? 'فعال' : 'غیرفعال'}
+          </button>
         </div>
       </div>
 

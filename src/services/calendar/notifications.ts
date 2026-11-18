@@ -6,9 +6,40 @@
  * Web: Notification API + in-process timers (works while the app is open).
  */
 import { isNativeApp } from '@/lib/capacitor';
+import { getItem, setItem } from '@/lib/safeStorage';
 
 const timers = new Map<string, number>();
 const firedKeys = new Set<string>();
+
+export type AlarmSoundId = 'classic' | 'chime' | 'digital' | 'marimba';
+
+export const ALARM_SOUNDS: { id: AlarmSoundId; label: string; desc: string }[] = [
+  { id: 'classic', label: 'زنگ کلاسیک ساعت', desc: 'پالس دوگانه بیدارباش' },
+  { id: 'chime', label: 'ملودی آرام', desc: 'آکورد ملایم و دلنشین' },
+  { id: 'digital', label: 'دیجیتال سریع', desc: 'بیپ‌های دقیق و واضح' },
+  { id: 'marimba', label: 'ماریمبا', desc: 'ریتم گرم و مدرن' },
+];
+
+const ALARM_SOUND_KEY = 'YADETO_alarm_sound';
+const ALARM_VIBRATE_KEY = 'YADETO_alarm_vibrate';
+
+export function getSavedAlarmSound(): AlarmSoundId {
+  const raw = getItem(ALARM_SOUND_KEY);
+  if (raw === 'classic' || raw === 'chime' || raw === 'digital' || raw === 'marimba') return raw;
+  return 'classic';
+}
+
+export function setSavedAlarmSound(id: AlarmSoundId): void {
+  setItem(ALARM_SOUND_KEY, id);
+}
+
+export function getAlarmVibrationEnabled(): boolean {
+  return getItem(ALARM_VIBRATE_KEY) !== '0';
+}
+
+export function setAlarmVibrationEnabled(enabled: boolean): void {
+  setItem(ALARM_VIBRATE_KEY, enabled ? '1' : '0');
+}
 
 export interface ActiveAlarm {
   id: string;
@@ -27,36 +58,107 @@ export function subscribeToAlarms(listener: AlarmListener): () => void {
   };
 }
 
-export function playAlarmSound(): void {
+let activeAudioCtx: AudioContext | null = null;
+let alarmLoopTimer: number | null = null;
+
+function playTonePattern(soundId: AlarmSoundId): void {
   if (typeof window === 'undefined') return;
   try {
     const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const notes = [587.33, 783.99, 987.77]; // D5, G5, B5 pleasant chime
-    notes.forEach((freq, idx) => {
+    if (!activeAudioCtx || activeAudioCtx.state === 'closed') {
+      activeAudioCtx = new AudioCtx();
+    }
+    if (activeAudioCtx.state === 'suspended') {
+      void activeAudioCtx.resume();
+    }
+    const ctx = activeAudioCtx;
+
+    const scheduleTone = (
+      freq: number,
+      offset: number,
+      dur: number,
+      type: OscillatorType,
+      peak = 0.25,
+    ) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'sine';
+      osc.type = type;
       osc.frequency.value = freq;
-      const start = ctx.currentTime + idx * 0.16;
+      const start = ctx.currentTime + offset;
       gain.gain.setValueAtTime(0.001, start);
-      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      gain.gain.exponentialRampToValueAtTime(peak, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(start);
-      osc.stop(start + 0.38);
-    });
+      osc.stop(start + dur + 0.02);
+    };
+
+    if (soundId === 'classic') {
+      [0, 0.22, 0.44, 0.8].forEach((offset) => scheduleTone(880, offset, 0.16, 'triangle', 0.28));
+    } else if (soundId === 'digital') {
+      [0, 0.14, 0.28, 0.55, 0.69].forEach((offset) => scheduleTone(1174.66, offset, 0.1, 'square', 0.16));
+    } else if (soundId === 'marimba') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) =>
+        scheduleTone(freq, i * 0.15, 0.22, 'sine', 0.28),
+      );
+    } else {
+      // chime
+      [587.33, 783.99, 987.77].forEach((freq, i) =>
+        scheduleTone(freq, i * 0.18, 0.35, 'sine', 0.22),
+      );
+    }
   } catch {
     /* ignore audio context restrictions */
   }
 }
 
+export function playAlarmSound(soundId?: AlarmSoundId): void {
+  const id = soundId ?? getSavedAlarmSound();
+  playTonePattern(id);
+  if (getAlarmVibrationEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate([450, 200, 450]);
+    } catch {
+      /* ignore vibrate errors */
+    }
+  }
+}
+
+export function previewAlarmSound(soundId: AlarmSoundId): void {
+  playAlarmSound(soundId);
+}
+
+export function startAlarmLoop(soundId?: AlarmSoundId): void {
+  stopAlarmLoop();
+  const id = soundId ?? getSavedAlarmSound();
+  playAlarmSound(id);
+  if (typeof window !== 'undefined') {
+    alarmLoopTimer = window.setInterval(() => {
+      playAlarmSound(id);
+    }, 1800);
+  }
+}
+
+export function stopAlarmLoop(): void {
+  if (alarmLoopTimer !== null && typeof window !== 'undefined') {
+    window.clearInterval(alarmLoopTimer);
+    alarmLoopTimer = null;
+  }
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(0);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function triggerAlarm(title: string, body: string): void {
-  playAlarmSound();
+  startAlarmLoop();
   showNotification(title, body);
   const alarm: ActiveAlarm = {
     id: `alarm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -70,6 +172,7 @@ export function triggerAlarm(title: string, body: string): void {
 }
 
 export function snoozeAlarm(alarm: ActiveAlarm, minutes = 10): void {
+  stopAlarmLoop();
   const handle = window.setTimeout(() => {
     triggerAlarm(alarm.title, `${alarm.body} (یادآوری مجدد)`);
   }, minutes * 60 * 1000);
