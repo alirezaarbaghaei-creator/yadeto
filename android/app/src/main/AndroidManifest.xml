@@ -82,6 +82,41 @@
             </intent-filter>
         </service>
 
+        <!-- Home-screen Widget: Today Schedule -->
+        <receiver
+            android:name=".YadetoTodayWidgetProvider"
+            android:exported="true"
+            android:label="برنامه امروز یادتو">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today_info" />
+        </receiver>
+
+        <!-- Home-screen Widget: Quick Date & Summary -->
+        <receiver
+            android:name=".YadetoQuickWidgetProvider"
+            android:exported="true"
+            android:label="تقویم سریع یادتو">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_info" />
+        </receiver>
+
+        <!-- Restore ongoing notification & widgets after device reboot -->
+        <receiver
+            android:name=".YadetoBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
     <!-- Permissions -->

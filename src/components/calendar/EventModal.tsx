@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Clock, MapPin, Palette, CalendarPlus, BellRing } from 'lucide-react';
+import { X, Calendar as CalendarIcon, MapPin, Palette, CalendarPlus, BellRing } from 'lucide-react';
 import type { CalendarEvent, TaskCategory, MJalaliDate } from '@/types/calendar';
 import { MiniCalendar, toISO } from './MiniCalendar';
+import { TimePicker } from './TimePicker';
 import { getTodayJalali, isoDateToJalali, formatJalali } from '@/utils/jalaliDate';
 import { scheduleEventReminder, requestNotificationPermissions } from '@/services/calendar/notifications';
 
@@ -23,15 +24,6 @@ const CATEGORIES: { value: TaskCategory; label: string }[] = [
   { value: 'social', label: 'اجتماعی' },
   { value: 'other', label: 'سایر' },
 ];
-
-const HOURS24 = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2);
-  const m = i % 2 === 0 ? '00' : '30';
-  return `${String(h).padStart(2, '0')}:${m}`;
-});
-
-const selectCls =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus-ring cursor-pointer';
 
 const COLORS: { value: string; label: string }[] = [
   { value: '#4f46e5', label: 'بنفش' },
@@ -184,18 +176,13 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-slate-500">ساعت شروع</label>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0 text-primary-600" />
-                <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت شروع">
-                  {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
+              <TimePicker label="ساعت شروع" value={startTime} onChange={setStartTime} />
             </div>
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <label className="text-xs text-slate-500">ساعت پایان</label>
+                <label className="text-[11px] font-medium text-slate-500">ساعت پایان</label>
                 <button
+                  type="button"
                   onClick={() => setHasEndTime((v) => !v)}
                   className={`rounded-full border px-2 py-0.5 text-[10px] transition-all ${
                     hasEndTime
@@ -207,9 +194,7 @@ export function EventModal({ open, onClose, onSave, event, defaultDate }: EventM
                 </button>
               </div>
               {hasEndTime ? (
-                <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت پایان">
-                  {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
-                </select>
+                <TimePicker value={endTime} onChange={setEndTime} />
               ) : (
                 <button
                   type="button"

@@ -6,6 +6,7 @@ import com.getcapacitor.BridgeActivity;
 import com.yadeto.app.plugins.CafeBazaarBillingPlugin;
 import com.yadeto.app.plugins.DownloadsPlugin;
 import com.yadeto.app.plugins.OtpAutofillPlugin;
+import com.yadeto.app.plugins.YadetoStatusPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -23,6 +24,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CafeBazaarBillingPlugin.class);
         registerPlugin(DownloadsPlugin.class);
         registerPlugin(OtpAutofillPlugin.class);
+        registerPlugin(YadetoStatusPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

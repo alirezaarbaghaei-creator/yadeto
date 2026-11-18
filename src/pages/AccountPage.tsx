@@ -28,6 +28,12 @@ import {
   requestNotificationPermissions,
   type AlarmSoundId,
 } from '@/services/calendar/notifications';
+import {
+  isStickyStatusEnabled,
+  setStickyStatusEnabled,
+  syncAndroidStatusAndWidgets,
+} from '@/services/calendar/androidStatus';
+import { useCalendarStore } from '@/store/calendarStore';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { usePlanStore } from '@/store/planStore';
@@ -59,6 +65,7 @@ export function AccountPage() {
   const [error, setError] = useState('');
   const [alarmSound, setAlarmSound] = useState<AlarmSoundId>(() => getSavedAlarmSound());
   const [vibration, setVibration] = useState<boolean>(() => getAlarmVibrationEnabled());
+  const [stickyStatus, setStickyStatus] = useState<boolean>(() => isStickyStatusEnabled());
   const [notifStatus, setNotifStatus] = useState<string>('');
 
   const aiLimit = getAiAssistantLimit();
@@ -350,6 +357,36 @@ export function AccountPage() {
             }`}
           >
             {vibration ? 'فعال' : 'غیرفعال'}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-surface/60 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary-500" />
+            <div>
+              <span className="block text-xs font-semibold text-slate-700">نمایش وضعیت روزانه در نوار اعلان</span>
+              <span className="block text-[10px] text-slate-400">نمایش تاریخ و کارها حتی وقتی برنامه بسته است</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !stickyStatus;
+              setStickyStatus(next);
+              setStickyStatusEnabled(next);
+              const st = useCalendarStore.getState();
+              void syncAndroidStatusAndWidgets(
+                st.tasks,
+                st.events,
+                st.preferences?.workStart ?? '08:00',
+                st.preferences?.workEnd ?? '20:00',
+              );
+            }}
+            className={`rounded-full px-3 py-1 text-[11px] font-bold transition-colors ${
+              stickyStatus ? 'bg-primary-700 text-white' : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            {stickyStatus ? 'فعال' : 'غیرفعال'}
           </button>
         </div>
       </div>

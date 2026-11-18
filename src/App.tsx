@@ -18,6 +18,7 @@ import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { AlarmOverlay } from '@/components/AlarmOverlay';
 import { startReminderWatcher } from '@/services/calendar/notifications';
+import { syncAndroidStatusAndWidgets } from '@/services/calendar/androidStatus';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCalendarStore } from '@/store/calendarStore';
@@ -39,6 +40,18 @@ function AppShell() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
   const refresh = useCalendarStore((s) => s.refresh);
   const loaded = useCalendarStore((s) => s.loaded);
+  const tasks = useCalendarStore((s) => s.tasks);
+  const events = useCalendarStore((s) => s.events);
+  const preferences = useCalendarStore((s) => s.preferences);
+
+  useEffect(() => {
+    void syncAndroidStatusAndWidgets(
+      tasks,
+      events,
+      preferences?.workStart ?? '08:00',
+      preferences?.workEnd ?? '20:00',
+    );
+  }, [tasks, events, preferences]);
 
   // Track whether we're showing a standalone payment page (not part of the SPA)
   const [paymentView, setPaymentView] = useState<'callback' | 'result' | null>(() => {

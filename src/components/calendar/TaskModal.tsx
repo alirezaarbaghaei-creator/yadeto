@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Clock, CalendarPlus, BellRing } from 'lucide-react';
+import { X, Calendar as CalendarIcon, CalendarPlus, BellRing } from 'lucide-react';
 import type { Task, Priority, TaskCategory, RecurrenceType, MJalaliDate } from '@/types/calendar';
 import { MiniCalendar, toISO } from './MiniCalendar';
+import { TimePicker } from './TimePicker';
 import { getTodayJalali, isoDateToJalali, formatJalali } from '@/utils/jalaliDate';
 import { scheduleTaskReminder, requestNotificationPermissions } from '@/services/calendar/notifications';
 
@@ -47,16 +48,6 @@ const REMINDER_OPTIONS: { value: number; label: string }[] = [
   { value: 60, label: '۱ ساعت قبل' },
   { value: 1440, label: '۱ روز قبل' },
 ];
-
-
-const HOURS24 = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2);
-  const m = i % 2 === 0 ? '00' : '30';
-  return `${String(h).padStart(2, '0')}:${m}`;
-});
-
-const selectCls =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus-ring cursor-pointer';
 
 export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModalProps) {
   const [title, setTitle] = useState('');
@@ -207,17 +198,11 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
             </div>
             {hasTime && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 shrink-0 text-primary-600" />
-                  <select value={time} onChange={(e) => setTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت شروع">
-                    {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                  <span className="text-xs text-slate-400">تا</span>
-                  <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className={selectCls} dir="rtl" aria-label="ساعت پایان">
-                    {HOURS24.map((h) => <option key={h} value={h}>{h}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <TimePicker label="ساعت شروع" value={time} onChange={setTime} />
+                  <TimePicker label="ساعت پایان" value={endTime} onChange={setEndTime} />
                 </div>
-                <p className="text-[10px] text-slate-400">فرمت ۲۴ ساعته — بازه انجام کار</p>
+                <p className="text-[10px] text-slate-400">فرمت ۲۴ ساعته — انتخاب دقیق ساعت و دقیقه</p>
               </div>
             )}
           </div>
