@@ -7,10 +7,16 @@ import android.content.Intent;
 public class YadetoBootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+        String action = intent != null ? intent.getAction() : null;
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)
+                || Intent.ACTION_DATE_CHANGED.equals(action)
+                || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
+                || Intent.ACTION_TIME_SET.equals(action)) {
             YadetoStatusHelper.showOrCancelOngoingNotification(context);
             YadetoStatusHelper.updateAllWidgets(context);
-            YadetoStatusHelper.rescheduleAllPersistedAlarms(context);
+            if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_TIME_SET.equals(action)) {
+                YadetoStatusHelper.rescheduleAllPersistedAlarms(context);
+            }
         }
     }
 }

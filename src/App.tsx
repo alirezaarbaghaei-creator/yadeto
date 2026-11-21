@@ -52,6 +52,35 @@ function AppShell() {
     );
   }, [tasks, events, preferences]);
 
+  // Keep date, time, and persistent notification in sync with device clock (offline & online)
+  useEffect(() => {
+    const handleClockTick = () => {
+      const st = useCalendarStore.getState();
+      void syncAndroidStatusAndWidgets(
+        st.tasks,
+        st.events,
+        st.preferences?.workStart ?? '08:00',
+        st.preferences?.workEnd ?? '20:00',
+      );
+    };
+
+    // Sync every minute on device clock
+    const interval = setInterval(handleClockTick, 60_000);
+
+    // Sync immediately when app returns to foreground from background
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleClockTick();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
   // Track whether we're showing a standalone payment page (not part of the SPA)
   const [paymentView, setPaymentView] = useState<'callback' | 'result' | null>(() => {
     const path = window.location.pathname;

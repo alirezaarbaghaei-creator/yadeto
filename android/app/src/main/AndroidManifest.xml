@@ -108,12 +108,15 @@
                 android:resource="@xml/widget_quick_info" />
         </receiver>
 
-        <!-- Restore ongoing notification & widgets after device reboot -->
+        <!-- Restore ongoing notification & widgets after device reboot or date/time changes -->
         <receiver
             android:name=".YadetoBootReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
 
