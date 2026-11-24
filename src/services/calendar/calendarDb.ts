@@ -10,7 +10,7 @@
  *    by updatedAt, otherwise local copy stays authoritative.
  */
 import * as api from '@/lib/api';
-import type { Task, CalendarEvent, Holiday, UserPreferences } from '@/types/calendar';
+import type { Task, CalendarEvent, Holiday, UserPreferences, Note } from '@/types/calendar';
 import { localGet, localSet } from './storage';
 import { HOLIDAYS } from '@/data/holidays';
 
@@ -19,6 +19,7 @@ const KEYS = {
   events: 'events',
   holidays: 'holidays',
   preferences: 'preferences',
+  notes: 'notes',
 };
 
 function newId(): string {
@@ -254,6 +255,44 @@ export const calendarDb = {
       createdAt: '',
       userId: 'local',
     } as CalendarEvent);
+  },
+
+  // ---------- notes ----------
+
+  loadNotes(): Note[] {
+    const list = localGet<Note[]>(KEYS.notes) ?? [];
+    return [...list].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt.localeCompare(a.updatedAt));
+  },
+
+  saveNotes(notes: Note[]): void {
+    localSet(KEYS.notes, notes);
+  },
+
+  createNote(input: Partial<Note>): Note {
+    const now = nowISO();
+    const note: Note = {
+      id: newId(),
+      title: (input.title ?? '').trim() || 'یادداشت بدون عنوان',
+      content: input.content ?? '',
+      category: input.category ?? 'عمومی',
+      color: input.color ?? '#f8fafc',
+      pinned: input.pinned ?? false,
+      createdAt: now,
+      updatedAt: now,
+      userId: input.userId ?? 'local',
+    };
+    return note;
+  },
+
+  updateNote(id: string, updates: Partial<Note>, current: Note[]): Note | null {
+    const existing = current.find((n) => n.id === id);
+    if (!existing) return null;
+    const next: Note = { ...existing, ...updates, id, updatedAt: nowISO() };
+    return next;
+  },
+
+  deleteNote(id: string, current: Note[]): Note[] {
+    return current.filter((n) => n.id !== id);
   },
 
   // ---------- holidays (static reference + local additions) ----------

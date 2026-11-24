@@ -154,7 +154,23 @@ export type AIIntentType =
   | 'show_today'
   | 'show_day'
   | 'show_upcoming'
-  | 'create_reminder';
+  | 'create_reminder'
+  | 'create_note'
+  | 'update_note'
+  | 'delete_note'
+  | 'search_notes';
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  category?: string;
+  color?: string;
+  pinned?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+}
 
 export interface AIIntent {
   action: AIIntentType;

@@ -29,10 +29,113 @@ public final class YadetoStatusHelper {
     public static final String KEY_ALARM_SOUND = "alarmSound";
     public static final String KEY_ALARM_VIBRATE = "alarmVibrate";
 
+    public static final String KEY_SAVED_DATE = "savedDateIso";
+
     private static final String CHANNEL_ID = "yadeto_daily_status";
     private static final int NOTIFICATION_ID = 90210;
+    private static final int DAILY_ALARM_ID = 90211;
+
+    private static final String[] JALALI_MONTHS = {
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    };
+
+    private static final String[] JALALI_WEEKDAYS = {
+        "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"
+    };
 
     private YadetoStatusHelper() {}
+
+    public static String toFaDigits(int num) {
+        return toFaDigits(String.valueOf(num));
+    }
+
+    public static String toFaDigits(String input) {
+        if (input == null) return "";
+        char[] faDigits = {'۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'};
+        StringBuilder sb = new StringBuilder(input.length());
+        for (char c : input.toCharArray()) {
+            if (c >= '0' && c <= '9') {
+                sb.append(faDigits[c - '0']);
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String getTodayJalaliFull() {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        int gy = cal.get(java.util.Calendar.YEAR);
+        int gm = cal.get(java.util.Calendar.MONTH) + 1; // 1-12
+        int gd = cal.get(java.util.Calendar.DAY_OF_MONTH);
+        int dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK); // Sunday = 1 ... Saturday = 7
+
+        int[] g_d_m = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+        int jy = (gy > 1600) ? 979 : 0;
+        gy -= (gy > 1600) ? 1600 : 621;
+        int gy2 = (gm > 2) ? (gy + 1) : gy;
+        int days = 365 * gy + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400 - 80 + gd + g_d_m[gm - 1];
+        jy += 33 * (days / 12053);
+        days %= 12053;
+        jy += 4 * (days / 1461);
+        days %= 1461;
+        jy += (days - 1) / 365;
+        if (days > 0) {
+            days = (days - 1) % 365;
+        }
+        int jm, jd;
+        if (days < 186) {
+            jm = 1 + (days / 31);
+            jd = 1 + (days % 31);
+        } else {
+            jm = 7 + ((days - 186) / 30);
+            jd = 1 + ((days - 186) % 30);
+        }
+
+        String weekday = JALALI_WEEKDAYS[dayOfWeek - 1];
+        String monthName = (jm >= 1 && jm <= 12) ? JALALI_MONTHS[jm - 1] : "";
+        return weekday + " " + toFaDigits(jd) + " " + monthName + " " + toFaDigits(jy);
+    }
+
+    public static String getTodayIso() {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        return String.format(
+            java.util.Locale.US,
+            "%04d-%02d-%02d",
+            cal.get(java.util.Calendar.YEAR),
+            cal.get(java.util.Calendar.MONTH) + 1,
+            cal.get(java.util.Calendar.DAY_OF_MONTH)
+        );
+    }
+
+    public static void scheduleMidnightUpdate(Context context) {
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+
+        java.util.Calendar nextMidnight = java.util.Calendar.getInstance();
+        nextMidnight.add(java.util.Calendar.DAY_OF_YEAR, 1);
+        nextMidnight.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        nextMidnight.set(java.util.Calendar.MINUTE, 0);
+        nextMidnight.set(java.util.Calendar.SECOND, 5);
+        nextMidnight.set(java.util.Calendar.MILLISECOND, 0);
+
+        Intent intent = new Intent(context, YadetoBootReceiver.class);
+        intent.setAction(Intent.ACTION_DATE_CHANGED);
+        PendingIntent pi = PendingIntent.getBroadcast(
+            context,
+            DAILY_ALARM_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        long triggerAt = nextMidnight.getTimeInMillis();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC, triggerAt, pi);
+        } else {
+            am.setExact(AlarmManager.RTC, triggerAt, pi);
+        }
+    }
 
     public static void saveStatus(
         Context context,
@@ -47,7 +150,9 @@ public final class YadetoStatusHelper {
             .putString(KEY_SUMMARY, summaryLine)
             .putString(KEY_DETAILS, detailsText)
             .putBoolean(KEY_STICKY, stickyEnabled)
+            .putString(KEY_SAVED_DATE, getTodayIso())
             .apply();
+        scheduleMidnightUpdate(context);
     }
 
     public static void showOrCancelOngoingNotification(Context context) {
@@ -61,6 +166,27 @@ public final class YadetoStatusHelper {
             return;
         }
 
+        // Always check if day has changed since last save and compute fresh date
+        String todayIso = getTodayIso();
+        String savedIso = prefs.getString(KEY_SAVED_DATE, "");
+        String dateLabel = prefs.getString(KEY_DATE, "");
+        String summaryLine = prefs.getString(KEY_SUMMARY, "برنامه امروز آماده است");
+        String detailsText = prefs.getString(KEY_DETAILS, "");
+
+        if (!todayIso.equals(savedIso) || dateLabel.isEmpty() || dateLabel.equals("تقویم یادتو")) {
+            dateLabel = getTodayJalaliFull();
+            summaryLine = "برای مشاهده و مدیریت برنامه روز لمس کنید";
+            detailsText = "امروز برنامه‌ای ثبت نشده — برای ثبت کار یا رویداد ضربه بزنید";
+            prefs.edit()
+                .putString(KEY_DATE, dateLabel)
+                .putString(KEY_SUMMARY, summaryLine)
+                .putString(KEY_DETAILS, detailsText)
+                .putString(KEY_SAVED_DATE, todayIso)
+                .apply();
+        }
+
+        scheduleMidnightUpdate(context);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
@@ -72,9 +198,6 @@ public final class YadetoStatusHelper {
             nm.createNotificationChannel(channel);
         }
 
-        String dateLabel = prefs.getString(KEY_DATE, "تقویم یادتو");
-        String summaryLine = prefs.getString(KEY_SUMMARY, "برنامه امروز آماده است");
-        String detailsText = prefs.getString(KEY_DETAILS, "");
         String safeDetails = (detailsText != null && !detailsText.trim().isEmpty())
             ? detailsText
             : "امروز برنامه‌ای ثبت نشده — برای ثبت کار یا رویداد ضربه بزنید";

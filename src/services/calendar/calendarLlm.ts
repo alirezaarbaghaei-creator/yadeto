@@ -4,7 +4,7 @@
  * context. Returns null on any failure so callers show the offline message.
  */
 import { apiCall } from '@/lib/api';
-import type { Task, CalendarEvent, Holiday, MJalaliDate } from '@/types/calendar';
+import type { Task, CalendarEvent, Holiday, MJalaliDate, Note } from '@/types/calendar';
 import {
   getTodayJalali,
   formatJalali,
@@ -61,8 +61,9 @@ const SYSTEM_PROMPT = `# System Prompt — دستیار هوشمند یادتو 
 ابزارها و دسترسی‌های تو:
 ۱. تقویم شمسی کامل با مناسبت‌ها و تعطیلات رسمی ایران (در context)
 ۲. دسترسی کامل به همه کارها و رویدادهای ثبت‌شده کاربر (در context)
-۳. پروفایل و برنامه پایه کاربر از گفتگوی آشنایی (در context)
-۴. ابزار جستجوی وب (web_search) برای اطلاعات زنده دنیای واقعی
+۳. دسترسی کامل به تمام یادداشت‌ها (userNotes) و ایده‌های ثبت‌شده کاربر در context برای پاسخ به سوالات یا ثبت یادداشت جدید
+۴. پروفایل و برنامه پایه کاربر از گفتگوی آشنایی (در context)
+۵. ابزار جستجوی وب (web_search) برای اطلاعات زنده دنیای واقعی
 
 شخصیت: دوستانه، صمیمی، دقیق، منظم و مسئولیت‌پذیر. فارسی محاوره‌ای، پاسخ کوتاه و هدفمند، ایموجی کم و مناسب.
 
@@ -121,6 +122,9 @@ const SYSTEM_PROMPT = `# System Prompt — دستیار هوشمند یادتو 
 - find_free_time: { action:"find_free_time", date اختیاری, durationMinutes اختیاری }
 - auto_schedule_tasks: { action:"auto_schedule_tasks", date اختیاری ("YYYY-MM-DD" پیش‌فرض امروز) } — زمان‌بندی خودکار کارهای بدون ساعت در وقت‌های آزاد
 - update_work_hours: { action:"update_work_hours", workStart:"HH:mm", workEnd:"HH:mm", defaultReminder اختیاری }
+- create_note: { action:"create_note", title, content, category اختیاری } — وقتی کاربر می‌خواهد نکته، ایده، یادداشت، متن یا اطلاعاتی را برای خودش ذخیره کند
+- update_note: { action:"update_note", id یا title, title_new اختیاری, content اختیاری, category اختیاری }
+- delete_note: { action:"delete_note", id یا title }
 - batch_actions: { action:"batch_actions", items:[ ...لیست intentهای بالا... ] } — وقتی کاربر چند کار یا رویداد را هم‌زمان می‌خواهد ثبت کند
 - show_day: { action:"show_day", date:"YYYY-MM-DD" } — برنامه فقط همان روز با ترتیب ساعت
 - show_today / show_upcoming / summarize_week: { action:"..." }
@@ -140,7 +144,11 @@ export async function callLLM(
   tasks: Task[],
   events: CalendarEvent[],
   holidays: Holiday[],
-  opts?: { preferences?: import('@/types/calendar').UserPreferences | null; profile?: { fullName?: string; jobTitle?: string; organization?: string } | null },
+  opts?: {
+    preferences?: import('@/types/calendar').UserPreferences | null;
+    profile?: { fullName?: string; jobTitle?: string; organization?: string } | null;
+    notes?: Note[];
+  },
 ): Promise<LLMResponse | LLMError | null> {
   const today = getTodayJalali();
   const tomorrow = addJalaliDays(today, 1);
@@ -254,6 +262,13 @@ export async function callLLM(
     overdueTasks: tasks
       .filter((t) => t.status === 'pending' && t.dueDate < todayISO)
       .map((t) => ({ id: t.id, title: t.title, dueDate: t.dueDate, dueTime: t.dueTime })),
+    userNotes: (opts?.notes ?? []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      content: n.content,
+      category: n.category,
+      pinned: n.pinned,
+    })),
   };
 
   try {

@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { useAuthStore } from './authStore';
-import type { Task, CalendarEvent, Holiday, UserPreferences } from '@/types/calendar';
+import type { Task, CalendarEvent, Holiday, UserPreferences, Note } from '@/types/calendar';
 import { calendarDb, pullFromCloud, pullPreferences } from '@/services/calendar/calendarDb';
 import { getTodayISO } from '@/utils/jalaliDate';
 
@@ -13,6 +13,7 @@ interface CalendarState {
   loading: boolean;
   tasks: Task[];
   events: CalendarEvent[];
+  notes: Note[];
   holidays: Holiday[];
   preferences: UserPreferences | null;
 
@@ -27,6 +28,11 @@ interface CalendarState {
   updateEvent: (id: string, updates: Partial<CalendarEvent>) => void;
   deleteEvent: (id: string) => void;
 
+  addNote: (note: Partial<Note>) => Note;
+  updateNote: (id: string, updates: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+  togglePinNote: (id: string) => void;
+
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
 }
 
@@ -35,6 +41,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   loading: false,
   tasks: calendarDb.loadTasks(),
   events: calendarDb.loadEvents(),
+  notes: calendarDb.loadNotes(),
   holidays: calendarDb.loadHolidays(),
   preferences: null,
 
@@ -60,6 +67,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       set({
         tasks: cloud?.tasks ?? calendarDb.loadTasks(),
         events: cloud?.events ?? calendarDb.loadEvents(),
+        notes: calendarDb.loadNotes(),
         holidays: calendarDb.loadHolidays(),
         preferences: mergedPrefs,
         loaded: true,
@@ -70,6 +78,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       set({
         tasks: calendarDb.loadTasks(),
         events: calendarDb.loadEvents(),
+        notes: calendarDb.loadNotes(),
         holidays: calendarDb.loadHolidays(),
         preferences: calendarDb.loadPreferences('local'),
         loaded: true,
@@ -142,6 +151,38 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     const events = get().events.filter((e) => e.id !== id);
     calendarDb.saveEvents(events);
     set({ events });
+  },
+
+  addNote: (input) => {
+    const note = calendarDb.createNote({
+      ...input,
+      userId: get().preferences?.userId ?? 'local',
+    });
+    const notes = [note, ...get().notes];
+    calendarDb.saveNotes(notes);
+    set({ notes });
+    return note;
+  },
+
+  updateNote: (id, updates) => {
+    const updated = calendarDb.updateNote(id, updates, get().notes);
+    if (!updated) return;
+    const notes = get().notes.map((n) => (n.id === id ? updated : n));
+    notes.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt.localeCompare(a.updatedAt));
+    calendarDb.saveNotes(notes);
+    set({ notes });
+  },
+
+  deleteNote: (id) => {
+    const notes = calendarDb.deleteNote(id, get().notes);
+    calendarDb.saveNotes(notes);
+    set({ notes });
+  },
+
+  togglePinNote: (id) => {
+    const note = get().notes.find((n) => n.id === id);
+    if (!note) return;
+    get().updateNote(id, { pinned: !note.pinned });
   },
 
   updatePreferences: (prefs) => {

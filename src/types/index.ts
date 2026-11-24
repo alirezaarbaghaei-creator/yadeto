@@ -2,6 +2,7 @@ export type PageId =
   | 'home'
   | 'calendar'
   | 'tasks'
+  | 'notes'
   | 'assistant'
   | 'admin'
   | 'account'

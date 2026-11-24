@@ -6,6 +6,7 @@ import { MobileHeader } from '@/components/MobileHeader';
 import { Dashboard } from '@/pages/Dashboard';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { TasksPage } from '@/pages/TasksPage';
+import { NotesPage } from '@/pages/NotesPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { AuthPage } from '@/pages/AuthPage';
 import { AdminPage } from '@/pages/AdminPage';
@@ -260,6 +261,7 @@ function AppShell() {
     home: <Dashboard />,
     calendar: <CalendarPage />,
     tasks: <TasksPage />,
+    notes: <NotesPage />,
     assistant: <AssistantPage />,
     admin: <AdminPage />,
     account: <AccountPage />,

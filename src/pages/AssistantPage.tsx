@@ -198,10 +198,14 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 export function AssistantPage() {
   const tasks = useCalendarStore((s) => s.tasks);
   const events = useCalendarStore((s) => s.events);
+  const notes = useCalendarStore((s) => s.notes);
   const holidays = useCalendarStore((s) => s.holidays);
   const preferences = useCalendarStore((s) => s.preferences);
   const addTask = useCalendarStore((s) => s.addTask);
   const addEvent = useCalendarStore((s) => s.addEvent);
+  const addNote = useCalendarStore((s) => s.addNote);
+  const updateNote = useCalendarStore((s) => s.updateNote);
+  const deleteNote = useCalendarStore((s) => s.deleteNote);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
   const deleteTask = useCalendarStore((s) => s.deleteTask);
   const deleteEvent = useCalendarStore((s) => s.deleteEvent);
@@ -457,6 +461,60 @@ export function AssistantPage() {
           content: `✓ رویداد «${title}» برای ${formatISOToJalaliLong(iso)} ساعت ${toFaDigits(startTime)}${
             location ? ` در ${location}` : ''
           } ثبت شد.`,
+        });
+        return;
+      }
+
+      if (action === 'create_note') {
+        const title = ((intentData.title as string) || '').trim() || 'یادداشت جدید';
+        const content = ((intentData.content as string) || (intentData.description as string) || '').trim();
+        const category = (intentData.category as string) || 'عمومی';
+        addNote({ title, content, category });
+        pushMessage({
+          role: 'assistant',
+          content: `✓ یادداشت «${title}» با موفقیت ذخیره شد و در بخش یادداشت‌ها قرار گرفت.`,
+        });
+        return;
+      }
+
+      if (action === 'update_note') {
+        const id = (intentData.id as string) || '';
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = notes.find((n) => n.id === id || (titleQ && n.title.includes(titleQ)));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'یادداشت مورد نظر رو پیدا نکردم.' });
+          return;
+        }
+        const updates: Partial<typeof target> = {};
+        if (typeof intentData.title_new === 'string' && intentData.title_new.trim()) {
+          updates.title = intentData.title_new.trim();
+        }
+        if (typeof intentData.content === 'string') {
+          updates.content = intentData.content;
+        }
+        if (typeof intentData.category === 'string') {
+          updates.category = intentData.category;
+        }
+        updateNote(target.id, updates);
+        pushMessage({
+          role: 'assistant',
+          content: `✓ یادداشت «${updates.title || target.title}» به‌روزرسانی شد.`,
+        });
+        return;
+      }
+
+      if (action === 'delete_note') {
+        const id = (intentData.id as string) || '';
+        const titleQ = ((intentData.title as string) || '').trim();
+        const target = notes.find((n) => n.id === id || (titleQ && n.title.includes(titleQ)));
+        if (!target) {
+          pushMessage({ role: 'assistant', content: 'یادداشت مورد نظر رو برای حذف پیدا نکردم.' });
+          return;
+        }
+        deleteNote(target.id);
+        pushMessage({
+          role: 'assistant',
+          content: `✓ یادداشت «${target.title}» حذف شد.`,
         });
         return;
       }
@@ -1011,6 +1069,7 @@ export function AssistantPage() {
           jobTitle: preferences?.onboarding?.jobTitle,
           organization: undefined,
         },
+        notes,
       });
 
       if (!llmResponse || isLLMError(llmResponse)) {
