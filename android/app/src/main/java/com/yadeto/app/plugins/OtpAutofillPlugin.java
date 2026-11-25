@@ -1,5 +1,6 @@
 package com.yadeto.app.plugins;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
@@ -16,7 +19,6 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.google.android.gms.auth.api.phone.SmsRetriever;
-import com.google.android.gms.auth.api.phone.SmsRetrieverClient;
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.Status;
 
@@ -24,8 +26,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Exposes zero-permission OTP autofill to JS using Google's SMS Retriever API.
- * No runtime SMS permission and no Notification Access Settings required.
+ * Exposes zero-permission OTP autofill to JS using Google's SMS User Consent API.
+ * Works with any SMS format (no app hash required on the SMS server) and requires
+ * zero runtime SMS or Notification permissions.
  */
 @CapacitorPlugin(name = "SmsAutofill")
 public class OtpAutofillPlugin extends Plugin {
@@ -35,7 +38,27 @@ public class OtpAutofillPlugin extends Plugin {
     private static final Pattern CODE_PATTERN = Pattern.compile("(?<!\\d)(\\d{4,8})(?!\\d)");
 
     private BroadcastReceiver smsReceiver;
+    private ActivityResultLauncher<Intent> consentLauncher;
     private boolean active = false;
+
+    @Override
+    public void load() {
+        super.load();
+        consentLauncher = getActivity().registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    String message = result.getData().getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE);
+                    String code = extractCode(message);
+                    if (code != null) {
+                        JSObject data = new JSObject();
+                        data.put("code", code);
+                        notifyListeners(EVENT_CODE, data);
+                    }
+                }
+            }
+        );
+    }
 
     @PluginMethod
     public void isEnabled(PluginCall call) {
@@ -60,12 +83,12 @@ public class OtpAutofillPlugin extends Plugin {
         }
 
         try {
-            SmsRetrieverClient client = SmsRetriever.getClient(getContext());
-            client.startSmsRetriever()
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Google SMS Retriever started"))
-                .addOnFailureListener(e -> Log.w(TAG, "Google SMS Retriever failed to start", e));
-
             registerSmsReceiver();
+            SmsRetriever.getClient(getContext())
+                .startSmsUserConsent(null)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Google SMS User Consent started"))
+                .addOnFailureListener(e -> Log.w(TAG, "Google SMS User Consent failed to start", e));
+
             active = true;
 
             JSObject ret = new JSObject();
@@ -107,12 +130,21 @@ public class OtpAutofillPlugin extends Plugin {
                 if (status == null) return;
 
                 if (status.getStatusCode() == CommonStatusCodes.SUCCESS) {
-                    String message = (String) extras.get(SmsRetriever.EXTRA_SMS_MESSAGE);
-                    String code = extractCode(message);
-                    if (code != null) {
-                        JSObject data = new JSObject();
-                        data.put("code", code);
-                        notifyListeners(EVENT_CODE, data);
+                    Intent consentIntent = extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT);
+                    if (consentIntent != null && consentLauncher != null) {
+                        try {
+                            consentLauncher.launch(consentIntent);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to launch SMS consent dialog", e);
+                        }
+                    } else {
+                        String message = extras.getString(SmsRetriever.EXTRA_SMS_MESSAGE);
+                        String code = extractCode(message);
+                        if (code != null) {
+                            JSObject data = new JSObject();
+                            data.put("code", code);
+                            notifyListeners(EVENT_CODE, data);
+                        }
                     }
                 }
             }

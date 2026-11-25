@@ -269,7 +269,6 @@ public final class YadetoStatusHelper {
             .setContentText(summaryLine)
             .setCustomContentView(compactView)
             .setCustomBigContentView(expandedView)
-            .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)

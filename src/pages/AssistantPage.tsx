@@ -1246,7 +1246,7 @@ export function AssistantPage() {
       silenceTimerRef.current = window.setTimeout(() => {
         silenceTimerRef.current = null;
         recognition.stop();
-      }, 2800);
+      }, 1200);
     };
 
     recognition.onresult = (event) => {
@@ -1684,7 +1684,7 @@ export function AssistantPage() {
         >
           <span className="flex items-center gap-2 font-medium">
             {isListening && <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />}
-            {voiceError ?? 'در حال گوش دادن... با مکث ۳ ثانیه‌ای یا زدن دکمه میکروفون ارسال می‌شود'}
+            {voiceError ?? 'در حال گوش دادن... بلافاصله پس از مکث کوتاه ارسال می‌شود'}
           </span>
           {voiceError && (
             <button onClick={() => setVoiceError(null)} className="text-red-400 hover:text-red-600">

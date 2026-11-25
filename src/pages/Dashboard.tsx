@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Sparkles,
   Plus,
-  Clock,
   ListTodo,
   CalendarDays,
   ArrowLeft,
@@ -16,11 +14,12 @@ import {
   Pin,
   AlertCircle,
   Bot,
+  MapPin,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCalendarStore } from '@/store/calendarStore';
-import { getTodaySchedule, getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
+import { getVisibleTasksForDate } from '@/services/calendar/schedulingEngine';
 import { TaskCard } from '@/components/calendar/TaskCard';
 import { TaskModal } from '@/components/calendar/TaskModal';
 import { EventModal } from '@/components/calendar/EventModal';
@@ -54,11 +53,6 @@ function getTimeGreeting(): string {
   return 'شب بخیر';
 }
 
-function getCurrentTimeHHMM(): string {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
-
 export function Dashboard() {
   const setPage = useAppStore((s) => s.setPage);
   const launchAiPrompt = useAppStore((s) => s.launchAiPrompt);
@@ -67,7 +61,6 @@ export function Dashboard() {
   const events = useCalendarStore((s) => s.events);
   const notes = useCalendarStore((s) => s.notes);
   const holidays = useCalendarStore((s) => s.holidays);
-  const preferences = useCalendarStore((s) => s.preferences);
   const addTask = useCalendarStore((s) => s.addTask);
   const addEvent = useCalendarStore((s) => s.addEvent);
   const toggleTask = useCalendarStore((s) => s.toggleTask);
@@ -85,16 +78,9 @@ export function Dashboard() {
 
   const today = getTodayJalali();
   const todayISO = getTodayISO();
-  const prefs = preferences;
   const greetingName = user?.full_name ? user.full_name.split(' ')[0] : null;
-  const nowHHMM = getCurrentTimeHHMM();
 
   const visibleToday = useMemo(() => getVisibleTasksForDate(tasks, todayISO), [tasks, todayISO]);
-
-  const schedule = useMemo(
-    () => getTodaySchedule(events, visibleToday, prefs?.workStart ?? '08:00', prefs?.workEnd ?? '20:00'),
-    [events, visibleToday, prefs],
-  );
 
   const priorityRank: Record<Task['priority'], number> = { high: 0, medium: 1, low: 2 };
 
@@ -149,14 +135,13 @@ export function Dashboard() {
     launchAiPrompt(trimmed);
   };
 
-  // Progress ring math
   const radius = 25;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPct / 100) * circumference;
 
   return (
     <div className="space-y-5">
-      {/* Top Executive Day & AI Card */}
+      {/* Today Header + Single AI Input */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -164,10 +149,8 @@ export function Dashboard() {
         className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-primary-950 to-slate-950 p-5 sm:p-6 text-white shadow-premium border border-white/10"
       >
         <div className="relative z-10 space-y-4">
-          {/* Date + Greeting + Progress */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3.5 min-w-0">
-              {/* Bold Day Badge */}
               <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-white shadow-lg shadow-primary-600/30">
                 <span className="text-2xl font-black leading-none">{toFaDigits(today.day)}</span>
                 <span className="mt-1 text-[11px] font-bold text-white/90">
@@ -188,7 +171,6 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Compact Progress Ring */}
             <div className="flex items-center gap-2.5 rounded-2xl bg-white/8 border border-white/10 px-3 py-2 backdrop-blur-md shrink-0">
               <div className="relative h-14 w-14 flex items-center justify-center">
                 <svg className="h-14 w-14 -rotate-90" viewBox="0 0 60 60">
@@ -239,7 +221,7 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* Voice + Text AI Command Bar */}
+          {/* Single AI Command Bar */}
           <form onSubmit={handleAiSubmit}>
             <div className="flex items-center gap-2 rounded-2xl bg-white/10 border border-white/15 p-1.5 backdrop-blur-md focus-within:bg-white/15 focus-within:border-accent-400/50 transition-all">
               <button
@@ -255,7 +237,7 @@ export function Dashboard() {
                 type="text"
                 value={aiCommand}
                 onChange={(e) => setAiCommand(e.target.value)}
-                placeholder="به یادتو بگو یا بنویس... مثلاً «ساعت ۱۷ جلسه دارم»"
+                placeholder="از دستیار هوشمند بخواه... مثلاً «ساعت ۱۷ جلسه دارم»"
                 className="flex-1 bg-transparent px-2 py-2 text-xs sm:text-sm text-white placeholder:text-slate-300/75 focus:outline-none"
               />
               <button
@@ -270,59 +252,10 @@ export function Dashboard() {
         </div>
       </motion.section>
 
-      {/* Quick Actions Strip */}
-      <motion.section
-        custom={1}
-        variants={fadeUp}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-4 gap-2.5"
-      >
-        <button
-          onClick={() => { setEditingTask(null); setTaskModalOpen(true); }}
-          className="flex flex-col items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition-all hover:border-primary-300 hover:shadow-md active:scale-95"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
-            <Plus className="h-5 w-5" />
-          </span>
-          <span className="text-[11px] font-bold text-slate-700">کار جدید</span>
-        </button>
-
-        <button
-          onClick={() => { setEditingEvent(null); setEventModalOpen(true); }}
-          className="flex flex-col items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition-all hover:border-accent-300 hover:shadow-md active:scale-95"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50 text-accent-700">
-            <CalendarPlus className="h-5 w-5" />
-          </span>
-          <span className="text-[11px] font-bold text-slate-700">رویداد جدید</span>
-        </button>
-
-        <button
-          onClick={() => setPage('notes')}
-          className="flex flex-col items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition-all hover:border-amber-300 hover:shadow-md active:scale-95"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-            <StickyNote className="h-5 w-5" />
-          </span>
-          <span className="text-[11px] font-bold text-slate-700">یادداشت</span>
-        </button>
-
-        <button
-          onClick={launchAiVoice}
-          className="flex flex-col items-center gap-1.5 rounded-2xl border border-primary-100 bg-gradient-to-b from-primary-50/60 to-accent-50/40 p-3 shadow-sm transition-all hover:border-primary-300 hover:shadow-md active:scale-95"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-accent-500 text-white shadow-sm">
-            <Mic className="h-5 w-5" />
-          </span>
-          <span className="text-[11px] font-bold text-primary-800">دستیار صوتی</span>
-        </button>
-      </motion.section>
-
       {/* Overdue Alert Banner (if any) */}
       {overdueTasks.length > 0 && (
         <motion.div
-          custom={2}
+          custom={1}
           variants={fadeUp}
           initial="hidden"
           animate="show"
@@ -342,13 +275,12 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      {/* Main Content Grid */}
+      {/* Main Content Grid — Zero Duplicate Tasks */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Right Column (7 cols): Today's Tasks + Timeline */}
+        {/* Right Column (7 cols): Today's Tasks */}
         <div className="lg:col-span-7 space-y-5">
-          {/* Priority Today Tasks */}
           <motion.section
-            custom={3}
+            custom={2}
             variants={fadeUp}
             initial="hidden"
             animate="show"
@@ -364,30 +296,32 @@ export function Dashboard() {
                   </span>
                 )}
               </h3>
-              <button
-                onClick={() => setPage('tasks')}
-                className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
-              >
-                همه کارها
-                <ArrowLeft className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setEditingTask(null); setTaskModalOpen(true); }}
+                  className="flex items-center gap-1 rounded-xl bg-primary-50 hover:bg-primary-100 px-2.5 py-1.5 text-xs font-bold text-primary-700 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  کار
+                </button>
+                <button
+                  onClick={() => setPage('tasks')}
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-primary-700"
+                >
+                  همه
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
             {todayTasks.length === 0 ? (
               <div className="rounded-2xl bg-slate-50/80 p-6 text-center">
                 <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-success-500/75" />
                 <p className="text-sm font-semibold text-slate-700">همه کارهای امروز انجام شده یا ثبت نشده!</p>
-                <button
-                  onClick={() => { setEditingTask(null); setTaskModalOpen(true); }}
-                  className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary-50 px-3.5 py-1.5 text-xs font-bold text-primary-700 hover:bg-primary-100 transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  افزودن کار جدید
-                </button>
               </div>
             ) : (
               <div className="space-y-2.5">
-                {todayTasks.slice(0, 5).map((task) => (
+                {todayTasks.slice(0, 6).map((task) => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -397,133 +331,99 @@ export function Dashboard() {
                     onEdit={(t) => { setEditingTask(t); setTaskModalOpen(true); }}
                   />
                 ))}
-                {todayTasks.length > 5 && (
+                {todayTasks.length > 6 && (
                   <button
                     onClick={() => setPage('tasks')}
                     className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
-                    مشاهده {toFaDigits(String(todayTasks.length - 5))} کار دیگر
+                    مشاهده {toFaDigits(String(todayTasks.length - 6))} کار دیگر
                   </button>
                 )}
               </div>
             )}
           </motion.section>
+        </div>
 
-          {/* Visual Day Schedule */}
+        {/* Left Column (5 cols): Today's Events + Recent Notes */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Today's Events (Events only — no duplicated tasks) */}
           <motion.section
-            custom={4}
+            custom={3}
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="card-premium rounded-3xl p-5 space-y-4"
+            className="card-premium rounded-3xl p-5 space-y-3.5"
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
-                <Clock className="h-5 w-5 text-accent-600" />
-                برنامه زمان‌بندی امروز
+                <CalendarDays className="h-5 w-5 text-accent-600" />
+                رویدادهای امروز
+                {todayEvents.length > 0 && (
+                  <span className="rounded-full bg-accent-50 px-2.5 py-0.5 text-xs font-bold text-accent-700">
+                    {toFaDigits(String(todayEvents.length))}
+                  </span>
+                )}
               </h3>
-              <button
-                onClick={() => setPage('calendar')}
-                className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                تقویم کامل
-                <ArrowLeft className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setEditingEvent(null); setEventModalOpen(true); }}
+                  className="flex items-center gap-1 rounded-xl bg-accent-50 hover:bg-accent-100 px-2.5 py-1.5 text-xs font-bold text-accent-700 transition-colors"
+                >
+                  <CalendarPlus className="h-3.5 w-3.5" />
+                  رویداد
+                </button>
+                <button
+                  onClick={() => setPage('calendar')}
+                  className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-primary-700"
+                >
+                  تقویم
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
-            {schedule.items.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center space-y-2">
-                <CalendarDays className="mx-auto h-7 w-7 text-slate-400" />
-                <p className="text-xs font-medium text-slate-500">
-                  امروز هنوز رویداد یا کار زمان‌داری ثبت نشده است.
-                </p>
+            {todayEvents.length === 0 ? (
+              <div className="rounded-2xl bg-slate-50/70 p-5 text-center">
+                <p className="text-xs font-medium text-slate-500">امروز رویدادی ثبت نشده است.</p>
               </div>
             ) : (
-              <div className="relative space-y-3 pr-4 before:absolute before:right-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200/80">
-                {schedule.items.map((item) => {
-                  const isPast = item.time < nowHHMM;
-                  return (
-                    <div key={item.id} className="relative flex items-start gap-3 group">
-                      <span
-                        className="absolute -right-[13px] top-4 h-3 w-3 rounded-full ring-4 ring-white transition-transform group-hover:scale-125"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <div
-                        className={`flex-1 flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all ${
-                          isPast
-                            ? 'bg-slate-50/70 border-slate-200/60 opacity-75'
-                            : 'bg-white border-slate-200/80 hover:border-primary-200 hover:shadow-card'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="inline-block h-2 w-2 rounded-full shrink-0"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
-                              {toFaDigits(item.time)}
-                              {item.endTime ? ` تا ${toFaDigits(item.endTime)}` : ''}
-                            </span>
-                            <span className="rounded-md bg-primary-50/70 px-2 py-0.5 text-primary-700 font-medium">
-                              {item.type === 'event' ? 'رویداد' : 'کار'}
-                            </span>
-                          </div>
-                        </div>
+              <div className="space-y-2.5">
+                {todayEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    onClick={() => { setEditingEvent(ev); setEventModalOpen(true); }}
+                    className="cursor-pointer flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 hover:border-accent-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: ev.color || '#14b8a6' }}
+                        />
+                        <p className="truncate text-sm font-bold text-slate-800">{ev.title}</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <span className="rounded-md bg-accent-50 px-2 py-0.5 font-semibold text-accent-700">
+                          {toFaDigits(ev.startTime)}
+                          {ev.endTime ? ` تا ${toFaDigits(ev.endTime)}` : ''}
+                        </span>
+                        {ev.location && (
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {ev.location}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </motion.section>
-        </div>
-
-        {/* Left Column (5 cols): Summary Stats + Recent Notes */}
-        <div className="lg:col-span-5 space-y-5">
-          {/* 2-Card Summary (No Free Time) */}
-          <motion.div
-            custom={5}
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-2 gap-3"
-          >
-            <div
-              onClick={() => setPage('tasks')}
-              className="cursor-pointer card-base rounded-2xl p-4 transition-all hover:shadow-card-hover"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-600 border border-primary-100 mb-2.5">
-                <ListTodo className="h-5 w-5" />
-              </div>
-              <p className="text-2xl font-black text-slate-900">{toFaDigits(String(todayTasks.length))}</p>
-              <p className="text-xs font-bold text-slate-700 mt-0.5">کارهای باقی‌مانده</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {completedToday > 0 ? `${toFaDigits(String(completedToday))} انجام شده` : 'برای امروز'}
-              </p>
-            </div>
-
-            <div
-              onClick={() => setPage('calendar')}
-              className="cursor-pointer card-base rounded-2xl p-4 transition-all hover:shadow-card-hover"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50 text-accent-600 border border-accent-100 mb-2.5">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <p className="text-2xl font-black text-slate-900">{toFaDigits(String(todayEvents.length))}</p>
-              <p className="text-xs font-bold text-slate-700 mt-0.5">رویدادهای امروز</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {todayEvents[0] ? `اولین: ${toFaDigits(todayEvents[0].startTime)}` : 'برنامه‌ای نیست'}
-              </p>
-            </div>
-          </motion.div>
 
           {/* Recent & Pinned Notes Card */}
           <motion.section
-            custom={6}
+            custom={4}
             variants={fadeUp}
             initial="hidden"
             animate="show"
@@ -546,7 +446,7 @@ export function Dashboard() {
             {recentNotes.length === 0 ? (
               <div className="rounded-2xl bg-amber-50/50 border border-amber-100 p-5 text-center space-y-2">
                 <p className="text-xs font-medium text-slate-600">
-                  هنوز یادداشتی ثبت نکرده‌اید. نکات مهم را بنویسید تا هوش مصنوعی هم به خاطر بسپارد!
+                  هنوز یادداشتی ثبت نکرده‌اید.
                 </p>
                 <button
                   onClick={() => setPage('notes')}
@@ -582,34 +482,6 @@ export function Dashboard() {
                 ))}
               </div>
             )}
-          </motion.section>
-
-          {/* AI Assistant Promo Card */}
-          <motion.section
-            custom={7}
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 via-primary-800 to-accent-800 p-5 text-white shadow-lg shadow-primary-900/20"
-          >
-            <div className="relative z-10 flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-accent-200">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  دستیار هوشمند یادتو
-                </div>
-                <p className="text-xs text-primary-100 leading-5">
-                  با صدای خودت کارها، رویدادها و یادداشت‌ها را مدیریت کن.
-                </p>
-              </div>
-              <button
-                onClick={launchAiVoice}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-primary-700 shadow-lg transition-transform hover:scale-105 active:scale-95"
-                title="شروع مکالمه صوتی"
-              >
-                <Mic className="h-5 w-5" />
-              </button>
-            </div>
           </motion.section>
         </div>
       </div>

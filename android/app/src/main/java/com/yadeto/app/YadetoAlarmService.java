@@ -54,12 +54,14 @@ public class YadetoAlarmService extends Service {
 
         if (ACTION_STOP.equals(action)) {
             stopAlarmPlayback();
+            sendBroadcast(new Intent(YadetoAlarmActivity.ACTION_CLOSE_ALARM_UI).setPackage(getPackageName()));
             stopSelf();
             return START_NOT_STICKY;
         }
 
         if (ACTION_SNOOZE.equals(action)) {
             stopAlarmPlayback();
+            sendBroadcast(new Intent(YadetoAlarmActivity.ACTION_CLOSE_ALARM_UI).setPackage(getPackageName()));
             scheduleSnooze(10);
             stopSelf();
             return START_NOT_STICKY;
@@ -90,6 +92,18 @@ public class YadetoAlarmService extends Service {
         }
 
         startAlarmPlayback();
+
+        try {
+            Intent alarmUi = new Intent(this, YadetoAlarmActivity.class);
+            alarmUi.putExtra("alarmId", currentAlarmId);
+            alarmUi.putExtra("title", currentTitle);
+            alarmUi.putExtra("body", currentBody);
+            alarmUi.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(alarmUi);
+        } catch (Exception ignored) {
+            // On locked screens / Android 10+ background restrictions, setFullScreenIntent handles launching YadetoAlarmActivity
+        }
+
         return START_STICKY;
     }
 
@@ -108,8 +122,11 @@ public class YadetoAlarmService extends Service {
             nm.createNotificationChannel(ch);
         }
 
-        Intent openIntent = new Intent(this, MainActivity.class);
-        openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        Intent openIntent = new Intent(this, YadetoAlarmActivity.class);
+        openIntent.putExtra("alarmId", currentAlarmId);
+        openIntent.putExtra("title", currentTitle);
+        openIntent.putExtra("body", currentBody);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent openPending = PendingIntent.getActivity(
             this,
             300,

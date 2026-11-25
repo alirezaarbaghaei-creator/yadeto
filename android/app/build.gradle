@@ -15,8 +15,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // The in-app diagnostics panel was removed from the release build; log
         // capture stays on for support, but there is no UI to open it.
-        versionCode 16
-        versionName "1.6.9"
+        versionCode 17
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

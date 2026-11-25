@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center"
+    android:layoutDirection="rtl"
+    android:orientation="vertical"
+    android:padding="28dp">
+
+    <!-- Top Badge -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_badge_bg"
+        android:paddingLeft="16dp"
+        android:paddingTop="8dp"
+        android:paddingRight="16dp"
+        android:paddingBottom="8dp"
+        android:text="یادآوری هوشمند یادتو"
+        android:textColor="#38bdf8"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <!-- Current Time -->
+    <TextView
+        android:id="@+id/alarm_clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:fontFamily="sans-serif-black"
+        android:text="۱۲:۰۰"
+        android:textColor="#ffffff"
+        android:textSize="54sp"
+        android:textStyle="bold" />
+
+    <!-- Alarm Icon Circle -->
+    <FrameLayout
+        android:layout_width="88dp"
+        android:layout_height="88dp"
+        android:layout_marginTop="24dp"
+        android:background="@drawable/notif_day_badge">
+
+        <ImageView
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_gravity="center"
+            android:contentDescription="آلارم"
+            android:src="@android:drawable/ic_lock_idle_alarm"
+            android:tint="#fbbf24" />
+    </FrameLayout>
+
+    <!-- Event/Task Title -->
+    <TextView
+        android:id="@+id/alarm_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:text="یادآوری برنامه"
+        android:textColor="#ffffff"
+        android:textDirection="rtl"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <!-- Event/Task Details -->
+    <TextView
+        android:id="@+id/alarm_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:text="زمان انجام کار یا رویداد شما فرا رسیده است"
+        android:textColor="#cbd5e1"
+        android:textDirection="rtl"
+        android:textSize="16sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="16dp">
+
+        <Button
+            android:id="@+id/btn_alarm_stop"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:backgroundTint="#ef4444"
+            android:text="توقف آلارم"
+            android:textColor="#ffffff"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_alarm_snooze"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#334155"
+            android:text="تعویق ۱۰ دقیقه"
+            android:textColor="#f8fafc"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>
