@@ -16,6 +16,7 @@ import {
   Sparkles,
   Plus,
   StickyNote,
+  AudioLines,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -576,39 +577,59 @@ export function BottomNav() {
   const setPage = useAppStore((s) => s.setPage);
   const openQuickAdd = useAppStore((s) => s.openQuickAdd);
 
-  // 5 core tabs with centered Quick-Add in a 6-element layout or 5 tabs + FAB.
-  // We place Home & Calendar on right, Notes & Assistant on left, Tasks with quick access.
-  const rightItems = baseNavItems.slice(0, 2); // Home, Calendar
-  const leftItems = baseNavItems.slice(3, 5);  // Notes, Assistant
-  // Tasks item
-  const tasksItem = baseNavItems[2];
+  // Symmetric 5-column layout so the Quick-Add (+) button is mathematically dead-center:
+  // Right (RTL start): Home, Calendar | Center: (+) | Left (RTL end): Notes, Assistant
+  const rightItems: NavItem[] = [
+    baseNavItems[0], // خانه
+    baseNavItems[1], // تقویم
+  ];
+  const leftItems: NavItem[] = [
+    baseNavItems[3], // یادداشت
+    { id: 'assistant', label: 'دستیار صوتی', icon: AudioLines }, // دستیار صوتی
+  ];
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
     const active = currentPage === item.id;
+    const isAssistant = item.id === 'assistant';
     return (
       <button
         key={item.id}
         onClick={() => setPage(item.id)}
-        className="relative flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl transition-colors"
+        className="relative flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl transition-all active:scale-95"
       >
         {active && (
           <motion.span
             layoutId="mobile-bottom-pill"
-            transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-            className="absolute inset-x-1 inset-y-0.5 rounded-2xl bg-primary-50/90 border border-primary-100/80"
+            transition={{ type: 'spring', stiffness: 450, damping: 34 }}
+            className={`absolute inset-x-1 inset-y-0.5 rounded-2xl border ${
+              isAssistant
+                ? 'bg-gradient-to-b from-primary-50 to-accent-50/70 border-primary-200/70'
+                : 'bg-primary-50/90 border-primary-100/80'
+            }`}
           />
         )}
         <div
           className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-xl transition-transform duration-200 ${
-            active ? 'text-primary-700 scale-105' : 'text-slate-400'
+            active
+              ? 'text-primary-700 scale-110'
+              : isAssistant
+                ? 'text-primary-500'
+                : 'text-slate-400'
           }`}
         >
-          <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.9} />
+          <Icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.3 : 1.9} />
+          {isAssistant && !active && (
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-500 ring-2 ring-white" />
+          )}
         </div>
         <span
-          className={`relative z-10 text-[9.5px] leading-none transition-colors ${
-            active ? 'font-bold text-primary-700' : 'font-medium text-slate-400'
+          className={`relative z-10 text-[10px] leading-none transition-colors ${
+            active
+              ? 'font-bold text-primary-700'
+              : isAssistant
+                ? 'font-semibold text-primary-600'
+                : 'font-medium text-slate-400'
           }`}
         >
           {item.label}
@@ -620,20 +641,19 @@ export function BottomNav() {
   return (
     <nav
       aria-label="ناوبری موبایل"
-      className="lg:hidden fixed inset-x-2.5 bottom-[max(0.6rem,env(safe-area-inset-bottom))] z-40 rounded-3xl border border-slate-200/80 bg-white/95 backdrop-blur-2xl shadow-glass-lg px-1.5 py-1.5"
+      className="lg:hidden fixed inset-x-3 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-40 rounded-[26px] border border-slate-200/80 bg-white/95 backdrop-blur-2xl shadow-[0_10px_35px_-10px_rgba(15,23,42,0.18)] px-2 py-1.5"
     >
-      <div className="grid grid-cols-6 items-center gap-0.5">
+      <div className="grid grid-cols-5 items-center gap-1">
         {rightItems.map(renderNavItem)}
-        {renderNavItem(tasksItem)}
 
-        {/* Quick-Add FAB */}
+        {/* Mathematically Centered Quick-Add FAB */}
         <div className="flex items-center justify-center">
           <button
             onClick={() => openQuickAdd('picker')}
-            className="relative -mt-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white shadow-xl shadow-primary-800/35 ring-4 ring-white transition-all active:scale-95 hover:scale-105"
+            className="relative -mt-7 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 text-white shadow-[0_10px_24px_-4px_rgba(99,102,241,0.55)] ring-4 ring-white transition-all active:scale-95 hover:scale-105"
             aria-label="افزودن کار، رویداد یا یادداشت"
           >
-            <Plus className="h-6 w-6" strokeWidth={2.5} />
+            <Plus className="h-7 w-7" strokeWidth={2.5} />
           </button>
         </div>
 

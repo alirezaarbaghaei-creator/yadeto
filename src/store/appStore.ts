@@ -13,6 +13,9 @@ interface AppState {
   setPendingAiPrompt: (prompt: string | null) => void;
   launchAiPrompt: (prompt: string) => void;
   consumePendingAiPrompt: () => string | null;
+  pendingAiVoice: boolean;
+  launchAiVoice: () => void;
+  consumePendingAiVoice: () => boolean;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -28,5 +31,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prompt = get().pendingAiPrompt;
     if (prompt) set({ pendingAiPrompt: null });
     return prompt;
+  },
+  pendingAiVoice: false,
+  launchAiVoice: () => set({ pendingAiVoice: true, currentPage: 'assistant' }),
+  consumePendingAiVoice: () => {
+    const v = get().pendingAiVoice;
+    if (v) set({ pendingAiVoice: false });
+    return v;
   },
 }));

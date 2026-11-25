@@ -219,6 +219,7 @@ export function AssistantPage() {
   const incrementTemplate = usePlanStore((s) => s.incrementTemplate);
   const openUpgradeModal = usePlanStore((s) => s.openUpgradeModal);
   const consumePendingAiPrompt = useAppStore((s) => s.consumePendingAiPrompt);
+  const consumePendingAiVoice = useAppStore((s) => s.consumePendingAiVoice);
   const isOnline = useOnlineStatus();
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -1303,6 +1304,15 @@ export function AssistantPage() {
     }
   }, [isListening, thinking, pushMessage, processUserInput]);
 
+  useEffect(() => {
+    if (consumePendingAiVoice()) {
+      setVoiceReplyEnabled(true);
+      if (!isListening && !thinking) {
+        void toggleListening();
+      }
+    }
+  }, [consumePendingAiVoice, isListening, thinking, toggleListening]);
+
   const handleResetChat = () => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -1418,6 +1428,24 @@ export function AssistantPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!isListening) setVoiceReplyEnabled(true);
+              void toggleListening();
+            }}
+            disabled={thinking}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm active:scale-95 ${
+              isListening
+                ? 'bg-red-500 text-white shadow-red-500/30 animate-pulse'
+                : 'bg-gradient-to-r from-primary-600 to-accent-500 text-white shadow-primary-600/25 hover:opacity-95'
+            } disabled:opacity-40`}
+            title={isListening ? 'توقف مکالمه صوتی' : 'شروع مکالمه صوتی با دستیار'}
+          >
+            {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+            <span>{isListening ? 'در حال گوش دادن...' : 'مکالمه صوتی'}</span>
+          </button>
+
           <button
             onClick={() => {
               const next = !voiceReplyEnabled;
@@ -1679,15 +1707,15 @@ export function AssistantPage() {
           type="button"
           onClick={toggleListening}
           disabled={thinking}
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 ${
             isListening
               ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse'
-              : 'bg-slate-100 text-slate-600 hover:bg-primary-50 hover:text-primary-700'
+              : 'bg-gradient-to-br from-primary-600 to-accent-500 text-white shadow-md shadow-primary-600/25 hover:opacity-95'
           } disabled:opacity-40`}
           aria-label={isListening ? 'توقف ضبط صدا' : 'گفتگوی صوتی'}
           title={isListening ? 'توقف ضبط صدا' : 'صحبت با دستیار'}
         >
-          {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </button>
         <input
           value={input}
