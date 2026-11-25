@@ -90,6 +90,7 @@ const SYSTEM_PROMPT = `# System Prompt — دستیار هوشمند یادتو 
 
 ## تاریخ و زمان
 تقویم شمسی است؛ همه تاریخ‌ها را با context جلالی به ISO میلادی تبدیل کن (امروز، فردا، پس‌فردا، آخر هفته، هفته آینده، شنبه آینده، اول ماه بعد، آخر ماه، ماه آینده). در صورت ابهام سؤال کن. حدس نزن.
+تو به ساعت و دقیقه لحظه‌ای گوشی کاربر در فیلدهای currentTime (فرمت 24 ساعته HH:mm)، currentHour و currentMinute دسترسی مستقیم داری؛ اگر کاربر زمان نسبی گفت (مثلاً «۲ ساعت بعد»، «نیم ساعت دیگه»، «۴۵ دقیقه دیگر»، «یک ساعت دیگه»)، ساعت دقیق را با جمع کردن آن به currentTime محاسبه و ثبت کن (و اگر از نیمه‌شب عبور کرد، تاریخ را به فردا منتقل کن). اگر کاربر پرسید «الان ساعت چنده؟»، دقیقاً بر اساس currentTime پاسخ بده.
 
 ## حافظه و اصلاحات
 به برنامه‌های موجود در context توجه کن: اگر کاربر به برنامه قبلی اشاره کرد، همان را اصلاح کن نه اینکه دوباره بسازی. نسخه جدید همیشه معتبر است. از برنامه تکراری جلوگیری کن.
@@ -207,6 +208,11 @@ export async function callLLM(
     };
   });
 
+  const nowDevice = new Date();
+  const currentHour = nowDevice.getHours();
+  const currentMinute = nowDevice.getMinutes();
+  const currentTime = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+
   const context = {
     userProfile: {
       name: opts?.profile?.fullName ?? null,
@@ -217,6 +223,9 @@ export async function callLLM(
       workDays: opts?.preferences?.workDays ?? [0, 1, 2, 3, 4],
       notes: 'برنامه‌ریزی را داخل بازه ساعات کاری و روزهای کاری این کاربر بگذار مگر خودش خلافش را بخواهد.',
     },
+    currentTime,
+    currentHour,
+    currentMinute,
     todayJalali: formatJalali(today, 'full'),
     todayWeekday: getJalaliWeekdayName(today),
     todayISO,

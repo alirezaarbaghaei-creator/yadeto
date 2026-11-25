@@ -17,7 +17,7 @@ import { PaymentResult } from '@/pages/PaymentResult';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { AlarmOverlay } from '@/components/AlarmOverlay';
-import { startReminderWatcher, requestNotificationPermissions } from '@/services/calendar/notifications';
+import { startReminderWatcher, requestNotificationPermissions, syncNativeAlarms } from '@/services/calendar/notifications';
 import { syncAndroidStatusAndWidgets } from '@/services/calendar/androidStatus';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -51,6 +51,29 @@ function AppShell() {
       preferences?.workStart ?? '08:00',
       preferences?.workEnd ?? '20:00',
     );
+    const defaultMin = preferences?.defaultReminder ?? 15;
+    const enabled = preferences?.notificationsEnabled !== false;
+    const items = [
+      ...tasks
+        .filter((t) => t.status === 'pending' && t.dueTime)
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          date: t.dueDate,
+          time: t.dueTime,
+          reminder: t.reminder ?? defaultMin,
+          kind: 'task' as const,
+        })),
+      ...events.map((e) => ({
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        time: e.startTime,
+        reminder: e.reminder ?? defaultMin,
+        kind: 'event' as const,
+      })),
+    ];
+    void syncNativeAlarms(items, enabled);
   }, [tasks, events, preferences]);
 
   // Keep date, time, and persistent notification in sync with device clock (offline & online)

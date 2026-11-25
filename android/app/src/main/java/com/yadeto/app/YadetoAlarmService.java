@@ -174,7 +174,11 @@ public class YadetoAlarmService extends Service {
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "yadeto:alarm_wakelock");
+            @SuppressWarnings("deprecation")
+            int levelAndFlags = PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                | PowerManager.ON_AFTER_RELEASE;
+            wakeLock = pm.newWakeLock(levelAndFlags, "yadeto:alarm_wakelock");
             wakeLock.acquire(10 * 60 * 1000L);
         }
 

@@ -40,7 +40,7 @@ import { usePlanStore } from '@/store/planStore';
 import { PLANS } from '@/data/plans';
 import * as api from '@/lib/api';
 
-const APP_VERSION_LABEL = '1.6.9';
+const APP_VERSION_LABEL = '1.1';
 const APP_BUILD_NUMBER = '16';
 
 export function AccountPage() {

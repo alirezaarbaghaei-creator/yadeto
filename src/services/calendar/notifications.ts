@@ -338,8 +338,7 @@ export async function scheduleReminder(
   const id = `reminder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   if (await nativeAvailable()) {
-    const granted = await requestNotificationPermissions();
-    if (!granted) return null;
+    void requestNotificationPermissions().catch(() => {});
     const statusPlugin = getYadetoStatusPlugin();
     if (statusPlugin?.scheduleAlarm) {
       try {
@@ -456,3 +455,72 @@ export async function scheduleTaskReminder(
 }
 
 export const scheduleEventReminder = scheduleTaskReminder;
+
+const syncedNativeAlarmIds = new Set<number>();
+
+/**
+ * Syncs all upcoming task & event alarms directly to Android's native AlarmManager
+ * so reminders & full-screen alarms reliably fire even when the app is completely closed.
+ */
+export async function syncNativeAlarms(
+  items: WatchableReminderItem[],
+  enabled = true,
+): Promise<void> {
+  if (!(await nativeAvailable())) return;
+  const statusPlugin = getYadetoStatusPlugin();
+  if (!statusPlugin?.scheduleAlarm) return;
+
+  const now = Date.now();
+  const nextIds = new Set<number>();
+
+  if (enabled) {
+    for (const item of items) {
+      if (!item.date || !item.time) continue;
+      if (item.reminder !== undefined && item.reminder < 0) continue;
+      const minsBefore = item.reminder ?? 15;
+      const [y, m, d] = item.date.split('-').map(Number);
+      const [hh, mm] = item.time.split(':').map(Number);
+      if ([y, m, d, hh, mm].some((n) => Number.isNaN(n))) continue;
+
+      const triggerMs = new Date(y, m - 1, d, hh, mm, 0).getTime() - minsBefore * 60 * 1000;
+      if (triggerMs <= now) continue;
+
+      const alarmId = numericId(`${item.kind}:${item.id}`);
+      nextIds.add(alarmId);
+
+      const title = item.kind === 'event' ? `رویداد: ${item.title}` : `کار: ${item.title}`;
+      const body =
+        minsBefore > 0
+          ? `${minsBefore} دقیقه تا «${item.title}» باقی مانده (ساعت ${item.time})`
+          : `زمان «${item.title}» فرا رسید (ساعت ${item.time})`;
+
+      try {
+        await statusPlugin.scheduleAlarm({
+          alarmId,
+          title,
+          body,
+          triggerAtMs: triggerMs,
+          soundId: getSavedAlarmSound(),
+          vibrate: getAlarmVibrationEnabled(),
+        });
+      } catch {
+        // ignore individual schedule errors
+      }
+    }
+  }
+
+  // Cancel any previously synced alarms that were removed, completed, or disabled
+  if (statusPlugin.cancelAlarm) {
+    for (const oldId of syncedNativeAlarmIds) {
+      if (!nextIds.has(oldId)) {
+        try {
+          await statusPlugin.cancelAlarm({ alarmId: oldId });
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+  syncedNativeAlarmIds.clear();
+  for (const id of nextIds) syncedNativeAlarmIds.add(id);
+}
