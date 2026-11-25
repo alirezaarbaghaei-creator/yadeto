@@ -1512,13 +1512,6 @@ export function AssistantPage() {
           <CalendarDays className="h-3.5 w-3.5 text-accent-600" />
           {toFaDigits(String(todayEventsCount))} رویداد
         </button>
-        <button
-          onClick={() => sendPrompt('زمان‌های آزاد این هفته کجاست؟')}
-          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-cyan-300 hover:text-cyan-700 transition-colors"
-        >
-          <Coffee className="h-3.5 w-3.5 text-cyan-600" />
-          زمان آزاد: {formatFreeTime(todaySchedule.freeMinutes)}
-        </button>
         {overdueCount > 0 && (
           <button
             onClick={() => sendPrompt('کارهای عقب‌افتاده‌ام چیا هستن؟')}

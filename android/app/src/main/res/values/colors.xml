@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="notif_text_primary">#0f172a</color>
+    <color name="notif_text_secondary">#334155</color>
+    <color name="notif_text_muted">#475569</color>
+    <color name="notif_accent">#4f46e5</color>
+    <color name="notif_summary_text">#0369a1</color>
+    <color name="notif_day_badge_bg">#1a4f46e5</color>
+    <color name="notif_day_badge_stroke">#334f46e5</color>
+</resources>

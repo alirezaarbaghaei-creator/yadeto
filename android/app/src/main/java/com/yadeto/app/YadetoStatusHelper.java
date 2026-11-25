@@ -9,10 +9,16 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.graphics.drawable.IconCompat;
 
 import org.json.JSONObject;
 
@@ -64,12 +70,12 @@ public final class YadetoStatusHelper {
         return sb.toString();
     }
 
-    public static String getTodayJalaliFull() {
+    private static int[] getTodayJalaliRaw() {
         java.util.Calendar cal = java.util.Calendar.getInstance();
         int gy = cal.get(java.util.Calendar.YEAR);
-        int gm = cal.get(java.util.Calendar.MONTH) + 1; // 1-12
+        int gm = cal.get(java.util.Calendar.MONTH) + 1;
         int gd = cal.get(java.util.Calendar.DAY_OF_MONTH);
-        int dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK); // Sunday = 1 ... Saturday = 7
+        int dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK);
 
         int[] g_d_m = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
         int jy = (gy > 1600) ? 979 : 0;
@@ -92,10 +98,40 @@ public final class YadetoStatusHelper {
             jm = 7 + ((days - 186) / 30);
             jd = 1 + ((days - 186) % 30);
         }
+        return new int[]{jy, jm, jd, dayOfWeek};
+    }
 
-        String weekday = JALALI_WEEKDAYS[dayOfWeek - 1];
-        String monthName = (jm >= 1 && jm <= 12) ? JALALI_MONTHS[jm - 1] : "";
-        return weekday + " " + toFaDigits(jd) + " " + monthName + " " + toFaDigits(jy);
+    public static String getTodayJalaliFull() {
+        int[] j = getTodayJalaliRaw();
+        String weekday = JALALI_WEEKDAYS[j[3] - 1];
+        String monthName = (j[1] >= 1 && j[1] <= 12) ? JALALI_MONTHS[j[1] - 1] : "";
+        return weekday + " " + toFaDigits(j[2]) + " " + monthName + " " + toFaDigits(j[0]);
+    }
+
+    public static String getTodayJalaliDayFa() {
+        return toFaDigits(getTodayJalaliRaw()[2]);
+    }
+
+    public static String getTodayJalaliMonthName() {
+        int jm = getTodayJalaliRaw()[1];
+        return (jm >= 1 && jm <= 12) ? JALALI_MONTHS[jm - 1] : "";
+    }
+
+    private static Bitmap createDayStatusBitmap(String dayFa) {
+        int size = 96;
+        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.WHITE);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        paint.setTextSize(dayFa.length() > 1 ? 66f : 78f);
+
+        Paint.FontMetrics fm = paint.getFontMetrics();
+        float x = size / 2f;
+        float y = (size / 2f) - ((fm.ascent + fm.descent) / 2f);
+        canvas.drawText(dayFa, x, y, paint);
+        return bmp;
     }
 
     public static String getTodayIso() {
@@ -211,18 +247,24 @@ public final class YadetoStatusHelper {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        String dayFa = getTodayJalaliDayFa();
+        String monthName = getTodayJalaliMonthName();
+
         RemoteViews compactView = new RemoteViews(context.getPackageName(), R.layout.notification_status);
+        compactView.setTextViewText(R.id.notif_day_num, dayFa);
+        compactView.setTextViewText(R.id.notif_month_name, monthName);
         compactView.setTextViewText(R.id.notif_date, dateLabel);
         compactView.setTextViewText(R.id.notif_summary, summaryLine);
 
         RemoteViews expandedView = new RemoteViews(context.getPackageName(), R.layout.notification_status_expanded);
+        expandedView.setTextViewText(R.id.notif_exp_day_num, dayFa);
+        expandedView.setTextViewText(R.id.notif_exp_month_name, monthName);
         expandedView.setTextViewText(R.id.notif_exp_date, dateLabel);
         expandedView.setTextViewText(R.id.notif_exp_summary, summaryLine);
         expandedView.setTextViewText(R.id.notif_exp_details, safeDetails);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setColor(0xFF6D28D9)
+            .setColor(0xFF4F46E5)
             .setContentTitle(dateLabel)
             .setContentText(summaryLine)
             .setCustomContentView(compactView)
@@ -233,6 +275,12 @@ public final class YadetoStatusHelper {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            builder.setSmallIcon(IconCompat.createWithBitmap(createDayStatusBitmap(dayFa)));
+        } else {
+            builder.setSmallIcon(R.mipmap.ic_launcher);
+        }
 
         try {
             nm.notify(NOTIFICATION_ID, builder.build());

@@ -426,25 +426,14 @@ export function generateScheduleSuggestion(slots: TimeSlot[], taskTitle: string)
 export function generateDailySummary(
   taskCount: number,
   eventCount: number,
-  freeMinutes: number,
+  _freeMinutes = 0,
 ): string {
   const today = getTodayJalali();
   const weekday = getJalaliWeekdayName(today);
   let summary = `${weekday} ${toFaDigits(today.day)} ${['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'][today.month - 1]} ${toFaDigits(today.year)}\n\n`;
   summary += `وضعیت امروز:\n`;
   summary += `${toFaDigits(taskCount)} کار\n`;
-  summary += `${toFaDigits(eventCount)} رویداد\n`;
-  if (freeMinutes > 0) {
-    const hours = Math.floor(freeMinutes / 60);
-    const mins = freeMinutes % 60;
-    if (hours > 0 && mins > 0) {
-      summary += `${toFaDigits(hours)} ساعت و ${toFaDigits(mins)} دقیقه زمان آزاد`;
-    } else if (hours > 0) {
-      summary += `${toFaDigits(hours)} ساعت زمان آزاد`;
-    } else {
-      summary += `${toFaDigits(mins)} دقیقه زمان آزاد`;
-    }
-  }
+  summary += `${toFaDigits(eventCount)} رویداد`;
   return summary;
 }
 

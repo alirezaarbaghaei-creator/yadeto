@@ -65,22 +65,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
-        <!-- OTP autofill: reads the code out of the SMS notification.
-
-             BIND_NOTIFICATION_LISTENER_SERVICE is what tells the system this is a
-             notification listener, and that permission is held by the OS rather
-             than by this app, so requiring it here binds nobody but the system.
-             exported="false" on top of that is belt-and-braces: only the system
-             can start it, never another app. -->
-        <service
-            android:name=".plugins.OtpNotificationListener"
-            android:exported="false"
-            android:label="تشخیص خودکار کد تأیید"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
 
         <!-- Home-screen Widget: Today Schedule -->
         <receiver

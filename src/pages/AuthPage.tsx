@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Phone, Loader2, AlertCircle, KeyRound, ArrowRight, Lock, Eye, EyeOff, User, FileText, Bell, X } from 'lucide-react';
+import { Sparkles, Phone, Loader2, AlertCircle, KeyRound, ArrowRight, Lock, Eye, EyeOff, User, FileText, X } from 'lucide-react';
 import * as api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { ensureSmsAutofillPlugin, getSmsAutofillPluginSync } from '@/services/smsAutofillPlugin';
@@ -32,57 +32,14 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
 
   const isExistingUserRef = useRef(false);
   isExistingUserRef.current = isExistingUser;
-  const pendingSendRef = useRef(false);
   const phoneRef = useRef('');
   phoneRef.current = phone;
-  const [accessGranted, setAccessGranted] = useState(false);
-  const [showAccessDialog, setShowAccessDialog] = useState(false);
 
   useEffect(() => {
     if (timer <= 0) return;
     const t = setInterval(() => setTimer((v) => v - 1), 1000);
     return () => clearInterval(t);
   }, [timer]);
-
-  useEffect(() => {
-    if (step !== 'phone') return;
-    void (async () => {
-      const ok = await ensureSmsAutofillPlugin();
-      if (!ok) return;
-      const plugin = getSmsAutofillPluginSync();
-      if (!plugin) return;
-      try {
-        const res = await plugin.isEnabled();
-        setAccessGranted(!!(res && res.enabled));
-      } catch (err) {
-        console.warn('[sms-autofill] isEnabled failed', err);
-      }
-    })();
-  }, [step]);
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
-      const plugin = getSmsAutofillPluginSync();
-      if (!plugin) return;
-      void (async () => {
-        try {
-          const res = await plugin.isEnabled();
-          const granted = !!(res && res.enabled);
-          setAccessGranted(granted);
-          if (granted && pendingSendRef.current) {
-            pendingSendRef.current = false;
-            setError('');
-            await doSendOtp();
-          }
-        } catch (err) {
-          console.warn('[sms-autofill] isEnabled on resume failed', err);
-        }
-      })();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
 
   useEffect(() => {
     if (step !== 'otp') return;
@@ -137,41 +94,8 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
       setError('شماره موبایل نامعتبر است. مثال: 09123456789');
       return;
     }
-    let granted = accessGranted;
-    const plugin = getSmsAutofillPluginSync();
-    if (!granted && plugin) {
-      try {
-        const res = await plugin.isEnabled();
-        granted = !!(res && res.enabled);
-        if (granted) setAccessGranted(true);
-      } catch (err) {
-        console.warn('[sms-autofill] isEnabled failed', err);
-      }
-    }
-    if (!granted) {
-      setShowAccessDialog(true);
-      return;
-    }
     await doSendOtp();
   };
-
-  async function confirmOpenAccessSettings() {
-    setShowAccessDialog(false);
-    const plugin = getSmsAutofillPluginSync();
-    if (!plugin) return;
-    pendingSendRef.current = true;
-    try {
-      await plugin.openSettings();
-    } catch (err) {
-      pendingSendRef.current = false;
-      console.warn('[auth] openSettings failed', err);
-    }
-  }
-
-  function declineAccessAndSend() {
-    setShowAccessDialog(false);
-    void doSendOtp();
-  }
 
   const runVerifyOtp = async (value: string) => {
     setError('');
@@ -359,25 +283,8 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
                         className="w-full rounded-xl border border-slate-200 bg-white py-3 pr-11 pl-4 text-lg font-mono tracking-[0.5em] text-slate-900 placeholder:text-slate-300 focus-ring text-center"
                       />
                     </div>
-                    {!accessGranted && (
-                      <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-2.5">
-                        <p className="text-[11px] leading-relaxed text-amber-800 mb-2">
-                          برای خواندن خودکار کد، دسترسی «اعلان‌ها» را برای یادتو فعال کنید.
-                          هیچ مجوز پیامکی درخواست نمی‌شود.
-                        </p>
-                        <button type="button"
-                          onClick={async () => {
-                            const plugin = getSmsAutofillPluginSync();
-                            if (!plugin) return;
-                            try { await plugin.openSettings(); } catch (err) { console.warn('[sms-autofill] openSettings failed', err); }
-                          }}
-                          className="text-[11px] font-medium text-amber-700 underline">
-                          فعال‌سازی خواندن خودکار
-                        </button>
-                      </div>
-                    )}
                     <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                      کد به‌صورت خودکار خوانده می‌شود؛ در غیر این صورت می‌توانید از پیامک کپی کنید.
+                      کد تایید به‌صورت خودکار دریافت و تکمیل می‌شود.
                     </p>
                   </div>
                   {error && <ErrorBox text={error} />}
@@ -554,50 +461,6 @@ export function AuthPage({ assistantOnly = false, onAuthed }: AuthPageProps) {
           </div>
         </div>
       </motion.div>
-
-      <AnimatePresence>
-        {showAccessDialog && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-            onClick={() => setShowAccessDialog(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-              dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-dialog-title"
-              onClick={(e) => e.stopPropagation()}
-              className="mx-auto w-full max-w-[calc(100vw-2rem)] sm:max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
-                  <Bell className="h-5 w-5 text-primary-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 id="access-dialog-title" className="text-sm font-bold text-slate-800">تکمیل خودکار کد تأیید</h3>
-                  <p className="mt-1 text-xs leading-6 text-slate-500">
-                    می‌خواهی یادتو به اعلان‌ها دسترسی داشته باشد تا پیامک حاوی کد را بخواند و آن را خودکار وارد کند؟ اگر نخواهی، کد را مثل همیشه خودت وارد می‌کنی.
-                  </p>
-                </div>
-                <button type="button" onClick={() => setShowAccessDialog(false)} aria-label="بستن"
-                  className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-4 space-y-2">
-                <button type="button" onClick={confirmOpenAccessSettings}
-                  className="w-full rounded-xl bg-primary-700 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-800">
-                  بله، باز کردن تنظیمات
-                </button>
-                <button type="button" onClick={declineAccessAndSend}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                  نه، همین حالا کد را بفرست
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

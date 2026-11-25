@@ -1,7 +1,7 @@
 import { isNativeApp } from '@/lib/capacitor';
 import { getItem, setItem } from '@/lib/safeStorage';
 import type { CalendarEvent, Task } from '@/types/calendar';
-import { getVisibleTasksForDate, getTodaySchedule, formatFreeTime } from './schedulingEngine';
+import { getVisibleTasksForDate, getTodaySchedule } from './schedulingEngine';
 import { formatJalali, getTodayISO, getTodayJalali, toFaDigits } from '@/utils/jalaliDate';
 
 const STICKY_NOTIF_KEY = 'YADETO_sticky_status_notif';
@@ -56,7 +56,6 @@ export async function syncAndroidStatusAndWidgets(
     const summaryParts = [
       `${toFaDigits(String(pendingTasks.length))} کار مانده`,
       `${toFaDigits(String(todayEvents.length))} رویداد`,
-      `زمان آزاد: ${formatFreeTime(schedule.freeMinutes)}`,
     ];
 
     const detailLines: string[] = [];

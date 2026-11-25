@@ -2,60 +2,84 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/widget_bg"
+    android:background="@android:color/transparent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingLeft="4dp"
+    android:paddingTop="4dp"
+    android:paddingRight="4dp"
+    android:paddingBottom="4dp">
 
-    <!-- Header: Badge + Big Date -->
+    <!-- Header: Bold Day Badge + Date -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_badge_bg"
-            android:paddingLeft="10dp"
-            android:paddingTop="5dp"
-            android:paddingRight="10dp"
-            android:paddingBottom="5dp"
-            android:text="یادتو • مدیر برنامه"
-            android:textColor="#38bdf8"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+        <LinearLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/notif_day_badge"
+            android:gravity="center"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/notif_exp_date"
+            <TextView
+                android:id="@+id/notif_exp_day_num"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:includeFontPadding="false"
+                android:text="۱"
+                android:textColor="@color/notif_accent"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/notif_exp_month_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:text="آذر"
+                android:textColor="@color/notif_text_muted"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:gravity="end"
-            android:maxLines="1"
-            android:text="تقویم امروز"
-            android:textColor="#ffffff"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+            android:orientation="vertical">
 
-    <!-- Highlighted Summary Banner -->
-    <TextView
-        android:id="@+id/notif_exp_summary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="#26fbbf24"
-        android:gravity="end"
-        android:paddingLeft="10dp"
-        android:paddingTop="6dp"
-        android:paddingRight="10dp"
-        android:paddingBottom="6dp"
-        android:text="برنامه امروز"
-        android:textColor="#fde047"
-        android:textSize="13sp"
-        android:textStyle="bold" />
+            <TextView
+                android:id="@+id/notif_exp_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="end"
+                android:maxLines="1"
+                android:text="تقویم امروز"
+                android:textColor="@color/notif_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/notif_exp_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="end"
+                android:maxLines="1"
+                android:text="برنامه امروز"
+                android:textColor="@color/notif_summary_text"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- Details: Task and Event Items -->
     <TextView
@@ -64,10 +88,11 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:ellipsize="end"
+        android:fontFamily="sans-serif"
         android:gravity="end"
         android:lineSpacingExtra="4dp"
         android:maxLines="5"
         android:text="امروز برنامه‌ای ثبت نشده"
-        android:textColor="#ffffff"
+        android:textColor="@color/notif_text_secondary"
         android:textSize="13sp" />
 </LinearLayout>

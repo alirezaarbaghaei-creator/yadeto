@@ -20,6 +20,7 @@ import { TaskModal } from '@/components/calendar/TaskModal';
 import type { MJalaliDate, Task, CalendarEvent } from '@/types/calendar';
 import { EventModal } from '@/components/calendar/EventModal';
 import {
+  JALALI_MONTHS,
   getTodayJalali,
   formatJalali,
   toGregorian,
@@ -192,20 +193,26 @@ export function CalendarPage() {
           {/* Selected day header */}
           <div className="card-premium rounded-3xl p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-base sm:text-lg font-extrabold text-slate-900">
-                    {formatJalali(selected, 'long')}
-                  </p>
-                  {isSelectedToday && (
-                    <span className="rounded-full bg-primary-50 px-2.5 py-0.5 text-[10px] font-bold text-primary-700">
-                      امروز
-                    </span>
-                  )}
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-primary-800 text-white shadow-md shadow-primary-700/25">
+                  <span className="text-xl font-black leading-none">{toFaDigits(selected.day)}</span>
+                  <span className="mt-1 text-[10px] font-medium text-primary-100">{JALALI_MONTHS[selected.month - 1]}</span>
                 </div>
-                <p className="text-[11px] text-slate-400" dir="ltr" style={{ textAlign: 'right' }}>
-                  {selectedGregorian} • {selectedHijri}
-                </p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base sm:text-lg font-extrabold text-slate-900">
+                      {formatJalali(selected, 'full')}
+                    </p>
+                    {isSelectedToday && (
+                      <span className="rounded-full bg-primary-50 border border-primary-100 px-2.5 py-0.5 text-[10px] font-bold text-primary-700">
+                        امروز
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400" dir="ltr" style={{ textAlign: 'right' }}>
+                    {selectedGregorian} • {selectedHijri}
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
