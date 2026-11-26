@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ListTodo, CalendarPlus, StickyNote, Mic, X } from 'lucide-react';
+import { ListTodo, CalendarPlus, StickyNote, Mic, Sparkles, X } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useCalendarStore } from '@/store/calendarStore';
 import { TaskModal } from '@/components/calendar/TaskModal';
@@ -69,21 +69,46 @@ export function QuickAddModal() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Featured AI Voice Assistant CTA */}
+              <button
+                onClick={() => {
+                  handleCloseAll();
+                  launchAiVoice();
+                }}
+                className="w-full mb-3.5 relative overflow-hidden flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-l from-primary-600 via-primary-700 to-accent-600 p-4 text-white shadow-xl shadow-primary-700/30 transition-all hover:scale-[1.01] active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm ring-2 ring-white/30">
+                    <span className="absolute inset-0 rounded-2xl bg-white/25 animate-ping opacity-60" />
+                    <Mic className="relative h-6 w-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-black text-white">مکالمه صوتی با دستیار</p>
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/25 px-2 py-0.5 text-[10px] font-bold text-amber-200 border border-amber-300/30">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        سریع
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-primary-100 mt-0.5">
+                      صحبت کن تا کار، رویداد یا یادداشتت فوری ثبت بشه
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <div className="grid grid-cols-3 gap-2.5">
                 <button
                   onClick={() => {
                     setPickerOpen(false);
                     setTaskModalOpen(true);
                   }}
-                  className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-slate-100 p-4 transition-all hover:border-primary-300 hover:bg-primary-50/30 hover:shadow-lg"
+                  className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition-all hover:border-primary-300 hover:bg-primary-50/40 active:scale-95"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
-                    <ListTodo className="h-6 w-6" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+                    <ListTodo className="h-5 w-5" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-slate-800">کار جدید</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">با اولویت و یادآوری</p>
-                  </div>
+                  <p className="text-xs font-bold text-slate-800">کار جدید</p>
                 </button>
 
                 <button
@@ -91,15 +116,12 @@ export function QuickAddModal() {
                     setPickerOpen(false);
                     setEventModalOpen(true);
                   }}
-                  className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-slate-100 p-4 transition-all hover:border-accent-300 hover:bg-accent-50/30 hover:shadow-lg"
+                  className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition-all hover:border-accent-300 hover:bg-accent-50/40 active:scale-95"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-50 text-accent-700">
-                    <CalendarPlus className="h-6 w-6" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-50 text-accent-700">
+                    <CalendarPlus className="h-5 w-5" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-slate-800">رویداد جدید</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">با ساعت و مکان</p>
-                  </div>
+                  <p className="text-xs font-bold text-slate-800">رویداد جدید</p>
                 </button>
 
                 <button
@@ -107,31 +129,12 @@ export function QuickAddModal() {
                     handleCloseAll();
                     setPage('notes');
                   }}
-                  className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-slate-100 p-4 transition-all hover:border-amber-300 hover:bg-amber-50/30 hover:shadow-lg"
+                  className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition-all hover:border-amber-300 hover:bg-amber-50/40 active:scale-95"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                    <StickyNote className="h-6 w-6" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    <StickyNote className="h-5 w-5" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-slate-800">یادداشت جدید</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">ذخیره متن و ایده</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleCloseAll();
-                    launchAiVoice();
-                  }}
-                  className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-primary-100 bg-gradient-to-b from-primary-50/50 to-accent-50/30 p-4 transition-all hover:border-primary-300 hover:shadow-lg"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-accent-500 text-white shadow-md shadow-primary-600/25">
-                    <Mic className="h-6 w-6" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-primary-800">مکالمه صوتی</p>
-                    <p className="text-[10px] text-primary-600 mt-0.5">صحبت مستقیم با یادتو</p>
-                  </div>
+                  <p className="text-xs font-bold text-slate-800">یادداشت</p>
                 </button>
               </div>
             </motion.div>

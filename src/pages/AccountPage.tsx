@@ -395,7 +395,7 @@ export function AccountPage() {
       <div className="card-base rounded-2xl p-4 flex items-center justify-between">
         <p className="text-xs text-slate-500">نسخه برنامه</p>
         <p className="text-sm font-semibold text-slate-800" dir="ltr">
-          {APP_VERSION_LABEL} ({APP_BUILD_NUMBER})
+          {APP_VERSION_LABEL}
         </p>
       </div>
 

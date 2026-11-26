@@ -265,8 +265,54 @@ function AppShell() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="h-8 w-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-primary-950 to-slate-900 p-6 relative overflow-hidden">
+        {/* Ambient glowing blobs */}
+        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary-600/25 blur-3xl animate-pulse" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-accent-500/20 blur-3xl animate-pulse" />
+
+        <div className="relative flex flex-col items-center">
+          {/* Orbiting ring */}
+          <div className="relative flex h-28 w-28 items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2.6, ease: 'linear' }}
+              className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent-400 border-r-primary-400"
+            />
+            <motion.div
+              animate={{ rotate: -360 }}
+              transition={{ repeat: Infinity, duration: 4, ease: 'linear' }}
+              className="absolute inset-2 rounded-full border border-transparent border-b-primary-300/60 border-l-accent-300/60"
+            />
+            <motion.img
+              src="/logo.png"
+              alt="Yadeto"
+              animate={{ scale: [1, 1.06, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="h-16 w-16 rounded-2xl object-cover shadow-2xl shadow-primary-500/40 bg-white"
+            />
+          </div>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mt-6 text-2xl font-black tracking-tight bg-gradient-to-l from-white via-primary-200 to-accent-300 bg-clip-text text-transparent"
+          >
+            یادتو
+          </motion.h2>
+          <p className="mt-1.5 text-xs font-medium text-slate-300/80">
+            در حال آماده‌سازی دستیار و تقویم هوشمند...
+          </p>
+
+          {/* Animated shimmer progress bar */}
+          <div className="mt-5 h-1.5 w-44 overflow-hidden rounded-full bg-white/10">
+            <motion.div
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
+              className="h-full w-1/2 rounded-full bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400"
+            />
+          </div>
+        </div>
       </div>
     );
   }

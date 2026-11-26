@@ -323,14 +323,20 @@ export function cancelAllReminders(): void {
  * Schedule a local reminder. Returns an id (or null when the trigger is in
  * the past / notifications unavailable).
  */
+function toLatinDigits(str: string): string {
+  return str
+    .replace(/[\u06F0-\u06F9]/g, (c) => String(c.charCodeAt(0) - 0x06f0))
+    .replace(/[\u0660-\u0669]/g, (c) => String(c.charCodeAt(0) - 0x0660));
+}
+
 export async function scheduleReminder(
   title: string,
   body: string,
   triggerDate: string,
   triggerTime: string,
 ): Promise<string | null> {
-  const [year, month, day] = triggerDate.split('-').map(Number);
-  const [hour, minute] = triggerTime.split(':').map(Number);
+  const [year, month, day] = toLatinDigits(triggerDate.slice(0, 10)).split('-').map(Number);
+  const [hour, minute] = toLatinDigits(triggerTime).split(':').map(Number);
   const trigger = new Date(year, month - 1, day, hour, minute, 0);
 
   if (trigger.getTime() <= Date.now()) return null;
@@ -403,8 +409,8 @@ export function startReminderWatcher(getItems: () => WatchableReminderItem[]): (
       if (!item.date || !item.time) continue;
       if (item.reminder !== undefined && item.reminder < 0) continue;
       const minsBefore = item.reminder ?? 15;
-      const [y, m, d] = item.date.split('-').map(Number);
-      const [hh, mm] = item.time.split(':').map(Number);
+      const [y, m, d] = toLatinDigits(item.date.slice(0, 10)).split('-').map(Number);
+      const [hh, mm] = toLatinDigits(item.time).split(':').map(Number);
       if ([y, m, d, hh, mm].some((n) => Number.isNaN(n))) continue;
 
       const triggerMs = new Date(y, m - 1, d, hh, mm, 0).getTime() - minsBefore * 60 * 1000;
@@ -478,8 +484,8 @@ export async function syncNativeAlarms(
       if (!item.date || !item.time) continue;
       if (item.reminder !== undefined && item.reminder < 0) continue;
       const minsBefore = item.reminder ?? 15;
-      const [y, m, d] = item.date.split('-').map(Number);
-      const [hh, mm] = item.time.split(':').map(Number);
+      const [y, m, d] = toLatinDigits(item.date.slice(0, 10)).split('-').map(Number);
+      const [hh, mm] = toLatinDigits(item.time).split(':').map(Number);
       if ([y, m, d, hh, mm].some((n) => Number.isNaN(n))) continue;
 
       const triggerMs = new Date(y, m - 1, d, hh, mm, 0).getTime() - minsBefore * 60 * 1000;
