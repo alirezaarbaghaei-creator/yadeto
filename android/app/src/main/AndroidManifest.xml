@@ -120,6 +120,10 @@
             android:name=".YadetoAlarmReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".YadetoAlarmActionReceiver"
+            android:exported="false" />
+
         <service
             android:name=".YadetoAlarmService"
             android:exported="false"

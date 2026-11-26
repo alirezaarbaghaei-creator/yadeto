@@ -391,7 +391,7 @@ export function AssistantPage() {
         )
           ? intentData.recurrence
           : 'none') as RecurrenceType;
-        const reminder = typeof intentData.reminder === 'number' ? intentData.reminder : preferences?.defaultReminder ?? 15;
+        const reminder = typeof intentData.reminder === 'number' ? intentData.reminder : -1;
         const dayOfMonth = typeof intentData.day_of_month === 'number' ? intentData.day_of_month : undefined;
 
         const task = addTask({
@@ -406,7 +406,7 @@ export function AssistantPage() {
           dayOfMonth,
           reminder,
         });
-        if (task && task.dueTime) {
+        if (task && task.dueTime && reminder >= 0) {
           await scheduleTaskReminder(task.title, task.dueDate, task.dueTime, reminder);
         }
         void incrementTemplate(user?.id ?? 'local');
@@ -414,7 +414,7 @@ export function AssistantPage() {
           role: 'assistant',
           content: `✓ کار «${title}» برای ${formatISOToJalaliLong(iso)}${
             time ? ` ساعت ${toFaDigits(time)}` : ''
-          } ثبت شد.${task.dueTime ? ` ${toFaDigits(reminder)} دقیقه قبل یادآوری می‌کنم.` : ''}`,
+          } ثبت شد.${task.dueTime && reminder >= 0 ? (reminder === 0 ? ' سر ساعت یادآوری می‌کنم.' : ` ${toFaDigits(reminder)} دقیقه قبل یادآوری می‌کنم.`) : ''}`,
         });
         return;
       }

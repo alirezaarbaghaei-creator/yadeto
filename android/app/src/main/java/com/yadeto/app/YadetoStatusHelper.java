@@ -322,6 +322,20 @@ public final class YadetoStatusHelper {
         String soundId,
         boolean vibrate
     ) {
+        scheduleExactAlarm(context, alarmId, title, body, triggerAtMillis, soundId, vibrate, "", "event");
+    }
+
+    public static void scheduleExactAlarm(
+        Context context,
+        int alarmId,
+        String title,
+        String body,
+        long triggerAtMillis,
+        String soundId,
+        boolean vibrate,
+        String itemId,
+        String kind
+    ) {
         if (triggerAtMillis <= System.currentTimeMillis()) return;
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
@@ -335,6 +349,8 @@ public final class YadetoStatusHelper {
             obj.put("triggerAtMillis", triggerAtMillis);
             obj.put("soundId", soundId);
             obj.put("vibrate", vibrate);
+            obj.put("itemId", itemId != null ? itemId : "");
+            obj.put("kind", kind != null ? kind : "event");
             context.getSharedPreferences(ALARMS_PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(String.valueOf(alarmId), obj.toString())
@@ -347,6 +363,8 @@ public final class YadetoStatusHelper {
         intent.putExtra("body", body);
         intent.putExtra("soundId", soundId);
         intent.putExtra("vibrate", vibrate);
+        intent.putExtra("itemId", itemId != null ? itemId : "");
+        intent.putExtra("kind", kind != null ? kind : "event");
 
         PendingIntent pi = PendingIntent.getBroadcast(
             context,
@@ -395,7 +413,9 @@ public final class YadetoStatusHelper {
                     obj.optString("body", ""),
                     triggerAt,
                     obj.optString("soundId", "classic"),
-                    obj.optBoolean("vibrate", true)
+                    obj.optBoolean("vibrate", true),
+                    obj.optString("itemId", ""),
+                    obj.optString("kind", "event")
                 );
             } catch (Exception ignored) {}
         }

@@ -84,8 +84,8 @@ export function PricingPage() {
           <ArrowRight className="h-5 w-5" />
         </button>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">طرح‌ها و قیمت‌ها</h2>
-          <p className="text-sm text-slate-500">طرح مناسب خود را انتخاب کنید</p>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">اشتراک‌ها و پلن‌های یادتو</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">پلن متناسب با نیاز روزانه خود را انتخاب و فعال کنید</p>
         </div>
       </div>
 
@@ -115,17 +115,17 @@ export function PricingPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl bg-accent-50 px-4 py-2">
-              <Zap className="h-4 w-4 text-cyan-600" />
-              <span className="text-sm font-bold text-accent-700">
-                {(aiLimit - aiAssistantUsage).toLocaleString('fa-IR')} / {aiLimit.toLocaleString('fa-IR')} هوش
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 rounded-xl bg-accent-50 border border-accent-100 px-3.5 py-2">
+              <Zap className="h-4 w-4 text-accent-600" />
+              <span className="text-xs sm:text-sm font-bold text-accent-800">
+                {(aiLimit - aiAssistantUsage).toLocaleString('fa-IR')} / {aiLimit.toLocaleString('fa-IR')} پیام دستیار
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-xl bg-primary-50 px-4 py-2">
+            <div className="flex items-center gap-2 rounded-xl bg-primary-50 border border-primary-100 px-3.5 py-2">
               <Gift className="h-4 w-4 text-primary-600" />
-              <span className="text-sm font-bold text-primary-700">
-                {(templateLimit - templateUsage).toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')} ثبت کار و رویداد
+              <span className="text-xs sm:text-sm font-bold text-primary-800">
+                {(templateLimit - templateUsage).toLocaleString('fa-IR')} / {templateLimit.toLocaleString('fa-IR')} ثبت خودکار
               </span>
             </div>
           </div>
@@ -235,23 +235,23 @@ function PlanCard({
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-5">
-        <div className="flex items-center gap-1.5">
-          <Zap className="h-3.5 w-3.5 text-cyan-600" />
-          <span className="text-xs text-slate-600">
-            {plan.aiAssistantLimit.toLocaleString('fa-IR')} دستیار
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <div className="flex items-center gap-1.5 rounded-lg bg-accent-50 px-2.5 py-1">
+          <Zap className="h-3.5 w-3.5 text-accent-600" />
+          <span className="text-[11px] font-semibold text-accent-800">
+            {plan.aiAssistantLimit.toLocaleString('fa-IR')} پیام دستیار
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 rounded-lg bg-primary-50 px-2.5 py-1">
           <Gift className="h-3.5 w-3.5 text-primary-600" />
-          <span className="text-xs text-slate-600">
+          <span className="text-[11px] font-semibold text-primary-800">
             {plan.templateLimit.toLocaleString('fa-IR')} ثبت خودکار
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <User className="h-3.5 w-3.5 text-emerald-500" />
-          <span className="text-xs text-slate-600">
-            {plan.id === 'pro' ? 'همگام‌سازی نامحدود' : plan.id === 'basic' ? 'همگام‌سازی چند دستگاه' : 'تقویم جلالی و مناسبت‌ها'}
+        <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1">
+          <User className="h-3.5 w-3.5 text-emerald-600" />
+          <span className="text-[11px] font-semibold text-emerald-800">
+            {plan.id === 'pro' ? 'همگام‌سازی نامحدود' : plan.id === 'basic' ? 'همگام‌سازی چند دستگاه' : 'تقویم جلالی کامل'}
           </span>
         </div>
       </div>

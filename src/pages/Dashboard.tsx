@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Bot,
   MapPin,
+  Trash2,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -68,6 +69,7 @@ export function Dashboard() {
   const skipTask = useCalendarStore((s) => s.skipTask);
   const updateTask = useCalendarStore((s) => s.updateTask);
   const updateEvent = useCalendarStore((s) => s.updateEvent);
+  const deleteEvent = useCalendarStore((s) => s.deleteEvent);
   const user = useAuthStore((s) => s.user);
 
   const [aiCommand, setAiCommand] = useState('');
@@ -415,6 +417,18 @@ export function Dashboard() {
                         )}
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteEvent(ev.id);
+                      }}
+                      className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                      title="حذف رویداد"
+                      aria-label="حذف رویداد"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
               </div>

@@ -58,7 +58,7 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState<TaskCategory>('other');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
-  const [reminder, setReminder] = useState<number>(15);
+  const [reminder, setReminder] = useState<number>(-1);
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function TaskModal({ open, onClose, onSave, task, defaultDate }: TaskModa
     setPriority(task?.priority || 'medium');
     setCategory(task?.category || 'other');
     setRecurrence(task?.recurrence || 'none');
-    setReminder(task?.reminder ?? 15);
+    setReminder(task?.reminder ?? -1);
     setShowCalendar(false);
   }, [open, task, defaultDate]);
 

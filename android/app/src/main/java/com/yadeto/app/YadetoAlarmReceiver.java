@@ -7,17 +7,13 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioAttributes;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
 public class YadetoAlarmReceiver extends BroadcastReceiver {
-    private static final String FALLBACK_CHANNEL_ID = "yadeto_alarm_fallback";
+    private static final String ALARM_CHANNEL_ID = "yadeto_alarm_alerts_v2";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -28,7 +24,7 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
                 PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
                 "yadeto:alarm_receiver_wakelock"
             );
-            wl.acquire(15_000L);
+            wl.acquire(20_000L);
         }
 
         int alarmId = intent.getIntExtra("alarmId", 1001);
@@ -36,50 +32,47 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
         String body = intent.getStringExtra("body");
         String soundId = intent.getStringExtra("soundId");
         boolean vibrate = intent.getBooleanExtra("vibrate", true);
+        String itemId = intent.getStringExtra("itemId");
+        String kind = intent.getStringExtra("kind");
 
-        Intent serviceIntent = new Intent(context, YadetoAlarmService.class);
-        serviceIntent.setAction(YadetoAlarmService.ACTION_START);
-        serviceIntent.putExtra("alarmId", alarmId);
-        serviceIntent.putExtra("title", title);
-        serviceIntent.putExtra("body", body);
-        serviceIntent.putExtra("soundId", soundId);
-        serviceIntent.putExtra("vibrate", vibrate);
+        // 1. Immediately play native looping alarm ringtone + vibration (no background ForegroundService restriction)
+        YadetoAlarmSoundPlayer.start(context, vibrate);
 
-        try {
-            ContextCompat.startForegroundService(context, serviceIntent);
-        } catch (Exception e) {
-            // Fallback if OEM/OS blocks background foreground-service launch
-            showFallbackAlarmNotification(context, alarmId, title, body);
-        }
+        // 2. Post high-priority notification in notification shade with Stop & Complete Task buttons
+        showAlarmNotification(context, alarmId, title, body, soundId, vibrate, itemId, kind);
     }
 
-    private void showFallbackAlarmNotification(Context context, int alarmId, String title, String body) {
+    private void showAlarmNotification(
+        Context context,
+        int alarmId,
+        String title,
+        String body,
+        String soundId,
+        boolean vibrate,
+        String itemId,
+        String kind
+    ) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
-        Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        if (alarmUri == null) {
-            alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        }
+        int notifId = alarmId + 2000;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(
-                FALLBACK_CHANNEL_ID,
-                "آلارم‌های یادتو",
+                ALARM_CHANNEL_ID,
+                "زنگ و یادآوری برنامه",
                 NotificationManager.IMPORTANCE_HIGH
             );
-            AudioAttributes attrs = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build();
-            ch.setSound(alarmUri, attrs);
-            ch.enableVibration(true);
+            ch.setDescription("هشدار و زنگ یادآوری کارها و رویدادها");
+            ch.setSound(null, null); // Sound handled cleanly by YadetoAlarmSoundPlayer so Stop cancels it immediately
+            ch.enableVibration(false);
             ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             nm.createNotificationChannel(ch);
         }
 
         Intent openIntent = new Intent(context, YadetoAlarmActivity.class);
         openIntent.putExtra("alarmId", alarmId);
+        openIntent.putExtra("notifId", notifId);
         openIntent.putExtra("title", title);
         openIntent.putExtra("body", body);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -90,21 +83,71 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        Notification notif = new NotificationCompat.Builder(context, FALLBACK_CHANNEL_ID)
+        Intent stopIntent = new Intent(context, YadetoAlarmActionReceiver.class);
+        stopIntent.setAction(YadetoAlarmActionReceiver.ACTION_STOP_ALARM);
+        stopIntent.putExtra("alarmId", alarmId);
+        stopIntent.putExtra("notifId", notifId);
+        PendingIntent stopPending = PendingIntent.getBroadcast(
+            context,
+            alarmId + 3000,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Intent snoozeIntent = new Intent(context, YadetoAlarmActionReceiver.class);
+        snoozeIntent.setAction(YadetoAlarmActionReceiver.ACTION_SNOOZE_ALARM);
+        snoozeIntent.putExtra("alarmId", alarmId);
+        snoozeIntent.putExtra("notifId", notifId);
+        snoozeIntent.putExtra("title", title);
+        snoozeIntent.putExtra("body", body);
+        snoozeIntent.putExtra("soundId", soundId);
+        snoozeIntent.putExtra("vibrate", vibrate);
+        snoozeIntent.putExtra("itemId", itemId);
+        snoozeIntent.putExtra("kind", kind);
+        PendingIntent snoozePending = PendingIntent.getBroadcast(
+            context,
+            alarmId + 4000,
+            snoozeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        String safeTitle = (title != null && !title.trim().isEmpty()) ? title : "یادآوری یادتو";
+        String safeBody = (body != null && !body.trim().isEmpty()) ? body : "زمان برنامه شما فرا رسیده است";
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, ALARM_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle((title != null && !title.isEmpty()) ? title : "آلارم یادتو")
-            .setContentText((body != null && !body.isEmpty()) ? body : "زمان برنامه شما فرا رسیده است")
+            .setColor(0xFF4F46E5)
+            .setContentTitle(safeTitle)
+            .setContentText(safeBody)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(safeBody))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setSound(alarmUri)
-            .setAutoCancel(true)
+            .setOngoing(true)
+            .setAutoCancel(false)
             .setContentIntent(openPending)
             .setFullScreenIntent(openPending, true)
-            .build();
+            .setDeleteIntent(stopPending)
+            .addAction(0, "توقف زنگ", stopPending)
+            .addAction(0, "تعویق ۱۰ دقیقه", snoozePending);
+
+        if ("task".equals(kind) && itemId != null && !itemId.isEmpty()) {
+            Intent completeIntent = new Intent(context, YadetoAlarmActionReceiver.class);
+            completeIntent.setAction(YadetoAlarmActionReceiver.ACTION_COMPLETE_TASK);
+            completeIntent.putExtra("alarmId", alarmId);
+            completeIntent.putExtra("notifId", notifId);
+            completeIntent.putExtra("itemId", itemId);
+            PendingIntent completePending = PendingIntent.getBroadcast(
+                context,
+                alarmId + 5000,
+                completeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            builder.addAction(0, "انجام شد ✓", completePending);
+        }
 
         try {
-            nm.notify(alarmId + 2000, notif);
+            nm.notify(notifId, builder.build());
         } catch (SecurityException ignored) {}
     }
 }

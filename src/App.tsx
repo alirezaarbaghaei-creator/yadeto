@@ -17,7 +17,7 @@ import { PaymentResult } from '@/pages/PaymentResult';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { AlarmOverlay } from '@/components/AlarmOverlay';
-import { startReminderWatcher, requestNotificationPermissions, syncNativeAlarms } from '@/services/calendar/notifications';
+import { startReminderWatcher, requestNotificationPermissions, syncNativeAlarms, consumeNotificationCompletedTasks } from '@/services/calendar/notifications';
 import { syncAndroidStatusAndWidgets } from '@/services/calendar/androidStatus';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -76,9 +76,23 @@ function AppShell() {
     void syncNativeAlarms(items, enabled);
   }, [tasks, events, preferences]);
 
-  // Keep date, time, and persistent notification in sync with device clock (offline & online)
+  // Keep date, time, persistent notification, and notification-completed tasks in sync
   useEffect(() => {
+    const syncCompletedFromNotif = async () => {
+      const doneIds = await consumeNotificationCompletedTasks();
+      if (doneIds.length > 0) {
+        const st = useCalendarStore.getState();
+        for (const id of doneIds) {
+          const task = st.tasks.find((t) => t.id === id);
+          if (task && task.status !== 'completed') {
+            st.toggleTask(id);
+          }
+        }
+      }
+    };
+
     const handleClockTick = () => {
+      void syncCompletedFromNotif();
       const st = useCalendarStore.getState();
       void syncAndroidStatusAndWidgets(
         st.tasks,
@@ -87,6 +101,8 @@ function AppShell() {
         st.preferences?.workEnd ?? '20:00',
       );
     };
+
+    void syncCompletedFromNotif();
 
     // Sync every minute on device clock
     const interval = setInterval(handleClockTick, 60_000);

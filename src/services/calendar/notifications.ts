@@ -37,9 +37,12 @@ function getYadetoStatusPlugin() {
             triggerAtMs: number;
             soundId: string;
             vibrate: boolean;
+            itemId?: string;
+            kind?: string;
           }) => Promise<void>;
           cancelAlarm?: (opts: { alarmId: number }) => Promise<void>;
           stopActiveAlarm?: () => Promise<void>;
+          consumeCompletedTasks?: () => Promise<{ ids?: string[] }>;
         };
       };
     };
@@ -180,6 +183,14 @@ export function stopAlarmLoop(): void {
     window.clearInterval(alarmLoopTimer);
     alarmLoopTimer = null;
   }
+  if (activeAudioCtx) {
+    try {
+      void activeAudioCtx.close();
+    } catch {
+      /* ignore */
+    }
+    activeAudioCtx = null;
+  }
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     try {
       navigator.vibrate(0);
@@ -188,6 +199,15 @@ export function stopAlarmLoop(): void {
     }
   }
   void getYadetoStatusPlugin()?.stopActiveAlarm?.();
+}
+
+export async function consumeNotificationCompletedTasks(): Promise<string[]> {
+  try {
+    const res = await getYadetoStatusPlugin()?.consumeCompletedTasks?.();
+    return Array.isArray(res?.ids) ? res.ids : [];
+  } catch {
+    return [];
+  }
 }
 
 export function triggerAlarm(title: string, body: string): void {
@@ -508,6 +528,8 @@ export async function syncNativeAlarms(
           triggerAtMs: triggerMs,
           soundId: getSavedAlarmSound(),
           vibrate: getAlarmVibrationEnabled(),
+          itemId: item.id,
+          kind: item.kind,
         });
       } catch {
         // ignore individual schedule errors

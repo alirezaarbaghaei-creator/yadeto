@@ -88,17 +88,26 @@ public class YadetoAlarmActivity extends AppCompatActivity {
         titleView.setText((title != null && !title.trim().isEmpty()) ? title : "یادآوری برنامه یادتو");
         bodyView.setText((body != null && !body.trim().isEmpty()) ? body : "زمان برنامه شما فرا رسیده است");
 
+        int alarmId = intent != null ? intent.getIntExtra("alarmId", 1001) : 1001;
+        int notifId = intent != null ? intent.getIntExtra("notifId", alarmId + 2000) : (alarmId + 2000);
+
         stopBtn.setOnClickListener(v -> {
-            Intent stopIntent = new Intent(this, YadetoAlarmService.class);
-            stopIntent.setAction(YadetoAlarmService.ACTION_STOP);
-            startService(stopIntent);
+            Intent stopIntent = new Intent(this, YadetoAlarmActionReceiver.class);
+            stopIntent.setAction(YadetoAlarmActionReceiver.ACTION_STOP_ALARM);
+            stopIntent.putExtra("alarmId", alarmId);
+            stopIntent.putExtra("notifId", notifId);
+            sendBroadcast(stopIntent);
             finish();
         });
 
         snoozeBtn.setOnClickListener(v -> {
-            Intent snoozeIntent = new Intent(this, YadetoAlarmService.class);
-            snoozeIntent.setAction(YadetoAlarmService.ACTION_SNOOZE);
-            startService(snoozeIntent);
+            Intent snoozeIntent = new Intent(this, YadetoAlarmActionReceiver.class);
+            snoozeIntent.setAction(YadetoAlarmActionReceiver.ACTION_SNOOZE_ALARM);
+            snoozeIntent.putExtra("alarmId", alarmId);
+            snoozeIntent.putExtra("notifId", notifId);
+            snoozeIntent.putExtra("title", title);
+            snoozeIntent.putExtra("body", body);
+            sendBroadcast(snoozeIntent);
             finish();
         });
     }
