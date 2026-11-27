@@ -17,6 +17,7 @@ import { PaymentResult } from '@/pages/PaymentResult';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { AlarmOverlay } from '@/components/AlarmOverlay';
+import { AlarmPermissionModal } from '@/components/AlarmPermissionModal';
 import { startReminderWatcher, requestNotificationPermissions, syncNativeAlarms, consumeNotificationCompletedTasks } from '@/services/calendar/notifications';
 import { syncAndroidStatusAndWidgets } from '@/services/calendar/androidStatus';
 import { useAppStore } from '@/store/appStore';
@@ -385,6 +386,7 @@ function AppShell() {
       <QuickAddModal />
       <UpgradeModal />
       <AlarmOverlay />
+      <AlarmPermissionModal />
     </div>
   );
 }

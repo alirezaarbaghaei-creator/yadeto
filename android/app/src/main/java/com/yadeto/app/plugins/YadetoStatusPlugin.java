@@ -1,8 +1,16 @@
 package com.yadeto.app.plugins;
 
+import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
+
+import androidx.core.app.NotificationManagerCompat;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -107,5 +115,81 @@ public class YadetoStatusPlugin extends Plugin {
             ret.put("ids", new JSArray());
         }
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void checkAlarmPermissions(PluginCall call) {
+        Context ctx = getContext();
+        String pkg = ctx.getPackageName();
+
+        boolean notifications = NotificationManagerCompat.from(ctx).areNotificationsEnabled();
+
+        boolean exactAlarm = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            exactAlarm = am != null && am.canScheduleExactAlarms();
+        }
+
+        boolean batteryIgnored = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+            batteryIgnored = pm != null && pm.isIgnoringBatteryOptimizations(pkg);
+        }
+
+        boolean fullScreenIntent = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            fullScreenIntent = nm != null && nm.canUseFullScreenIntent();
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("notifications", notifications);
+        ret.put("exactAlarm", exactAlarm);
+        ret.put("batteryIgnored", batteryIgnored);
+        ret.put("fullScreenIntent", fullScreenIntent);
+        ret.put("allGranted", notifications && exactAlarm && batteryIgnored && fullScreenIntent);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestAlarmPermission(PluginCall call) {
+        String type = call.getString("type", "battery");
+        Context ctx = getContext();
+        String pkg = ctx.getPackageName();
+        Intent intent = null;
+
+        try {
+            if ("battery".equals(type) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + pkg));
+            } else if ("exactAlarm".equals(type) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                intent.setData(Uri.parse("package:" + pkg));
+            } else if ("fullScreenIntent".equals(type) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+                intent.setData(Uri.parse("package:" + pkg));
+            } else if ("notifications".equals(type) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, pkg);
+            }
+
+            if (intent == null) {
+                intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + pkg));
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                fallback.setData(Uri.parse("package:" + pkg));
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(fallback);
+                call.resolve();
+            } catch (Exception e2) {
+                call.reject("Cannot open permission settings", e2);
+            }
+        }
     }
 }
