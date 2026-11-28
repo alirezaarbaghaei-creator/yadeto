@@ -14,9 +14,10 @@ import android.os.Build;
 import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 public class YadetoAlarmReceiver extends BroadcastReceiver {
-    private static final String ALARM_CHANNEL_ID = "yadeto_alarm_insistent_v3";
+    private static final String ALARM_CHANNEL_ID = "yadeto_alarm_insistent_v4";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -38,7 +39,22 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
         String itemId = intent.getStringExtra("itemId");
         String kind = intent.getStringExtra("kind");
 
-        // Post system-managed FLAG_INSISTENT alarm notification (keeps ringing in system_server even if app process exits)
+        // Always start sound + vibration immediately (with AudioTrack fallback for emulators)
+        YadetoAlarmSoundPlayer.start(context, vibrate);
+
+        // Try starting foreground service so process stays alive to keep playing sound
+        try {
+            Intent svc = new Intent(context, YadetoAlarmService.class);
+            svc.setAction(YadetoAlarmService.ACTION_START);
+            svc.putExtra("alarmId", alarmId);
+            svc.putExtra("title", title);
+            svc.putExtra("body", body);
+            svc.putExtra("soundId", soundId);
+            svc.putExtra("vibrate", vibrate);
+            ContextCompat.startForegroundService(context, svc);
+        } catch (Exception ignored) {}
+
+        // Always post high-priority notification with Stop / Snooze / Done actions
         showAlarmNotification(context, alarmId, title, body, soundId, vibrate, itemId, kind);
     }
 
@@ -168,7 +184,6 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
             nm.notify(notifId, notif);
         } catch (SecurityException ignored) {}
 
-        // Also attempt to open the full-screen alarm screen directly
         try {
             context.startActivity(openIntent);
         } catch (Exception ignored) {}

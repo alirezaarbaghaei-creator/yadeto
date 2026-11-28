@@ -229,12 +229,33 @@ async function nativeRequestPermissions(): Promise<boolean> {
   }
 }
 
+let channelCreated = false;
+
+async function ensureReminderChannel(): Promise<void> {
+  if (channelCreated) return;
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    await LocalNotifications.createChannel({
+      id: 'yadeto_reminders',
+      name: 'یادآوری کارها و رویدادها',
+      description: 'اعلان و زنگ یادآوری برنامه‌های یادتو',
+      importance: 5,
+      visibility: 1,
+      vibration: true,
+    });
+    channelCreated = true;
+  } catch {
+    // ignore on web or older API
+  }
+}
+
 async function nativeSchedule(
   id: number,
   title: string,
   body: string,
   trigger: Date,
 ): Promise<void> {
+  await ensureReminderChannel();
   const { LocalNotifications } = await import('@capacitor/local-notifications');
   await LocalNotifications.schedule({
     notifications: [
@@ -242,10 +263,9 @@ async function nativeSchedule(
         id,
         title,
         body,
+        channelId: 'yadeto_reminders',
         schedule: { at: trigger, allowWhileIdle: true },
-        sound: 'default',
         smallIcon: 'ic_launcher',
-        largeIcon: 'icon-512',
       },
     ],
   });
@@ -468,7 +488,6 @@ export async function syncNativeAlarms(
 ): Promise<void> {
   if (!(await nativeAvailable())) return;
   const statusPlugin = getYadetoStatusPlugin();
-  if (!statusPlugin?.scheduleAlarm) return;
 
   const now = Date.now();
   const nextIds = new Set<number>();
@@ -494,33 +513,43 @@ export async function syncNativeAlarms(
           ? `${minsBefore} دقیقه تا «${item.title}» باقی مانده (ساعت ${item.time})`
           : `زمان «${item.title}» فرا رسید (ساعت ${item.time})`;
 
+      if (statusPlugin?.scheduleAlarm) {
+        try {
+          await statusPlugin.scheduleAlarm({
+            alarmId,
+            title,
+            body,
+            triggerAtMs: triggerMs,
+            soundId: getSavedAlarmSound(),
+            vibrate: getAlarmVibrationEnabled(),
+            itemId: item.id,
+            kind: item.kind,
+          });
+        } catch {
+          // ignore
+        }
+      }
+
+      // Also schedule via Capacitor LocalNotifications as a reliable secondary trigger
       try {
-        await statusPlugin.scheduleAlarm({
-          alarmId,
-          title,
-          body,
-          triggerAtMs: triggerMs,
-          soundId: getSavedAlarmSound(),
-          vibrate: getAlarmVibrationEnabled(),
-          itemId: item.id,
-          kind: item.kind,
-        });
+        await nativeSchedule(alarmId + 100_000, title, body, new Date(triggerMs));
       } catch {
-        // ignore individual schedule errors
+        // ignore
       }
     }
   }
 
   // Cancel any previously synced alarms that were removed, completed, or disabled
-  if (statusPlugin.cancelAlarm) {
-    for (const oldId of syncedNativeAlarmIds) {
-      if (!nextIds.has(oldId)) {
+  for (const oldId of syncedNativeAlarmIds) {
+    if (!nextIds.has(oldId)) {
+      if (statusPlugin?.cancelAlarm) {
         try {
           await statusPlugin.cancelAlarm({ alarmId: oldId });
         } catch {
           // ignore
         }
       }
+      void nativeCancel(oldId + 100_000);
     }
   }
   syncedNativeAlarmIds.clear();
