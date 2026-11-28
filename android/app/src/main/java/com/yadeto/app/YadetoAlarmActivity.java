@@ -88,6 +88,9 @@ public class YadetoAlarmActivity extends AppCompatActivity {
         titleView.setText((title != null && !title.trim().isEmpty()) ? title : "یادآوری برنامه یادتو");
         bodyView.setText((body != null && !body.trim().isEmpty()) ? body : "زمان برنامه شما فرا رسیده است");
 
+        // Ensure alarm sound/vibration plays while the full-screen UI is active
+        YadetoAlarmSoundPlayer.start(this, true);
+
         int alarmId = intent != null ? intent.getIntExtra("alarmId", 1001) : 1001;
         int notifId = intent != null ? intent.getIntExtra("notifId", alarmId + 2000) : (alarmId + 2000);
 

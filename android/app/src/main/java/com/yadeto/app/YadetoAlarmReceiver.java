@@ -167,5 +167,10 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
         try {
             nm.notify(notifId, notif);
         } catch (SecurityException ignored) {}
+
+        // Also attempt to open the full-screen alarm screen directly
+        try {
+            context.startActivity(openIntent);
+        } catch (Exception ignored) {}
     }
 }

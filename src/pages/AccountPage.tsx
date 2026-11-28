@@ -396,19 +396,45 @@ export function AccountPage() {
           type="button"
           onClick={async () => {
             const plugin = getYadetoStatusPlugin();
+            const triggerMs = Date.now() + 5000;
             if (plugin?.scheduleAlarm) {
-              await plugin.scheduleAlarm({
-                alarmId: 99999,
-                title: 'تست آلارم یادتو',
-                body: 'آلارم پس‌زمینه با موفقیت کار می‌کند!',
-                triggerAtMs: Date.now() + 5000,
-                soundId: alarmSound,
-                vibrate: vibration,
-                itemId: '',
-                kind: 'event',
-              });
-              setTestAlarmMsg('آلارم آزمایشی برای ۵ ثانیه دیگر تنظیم شد — می‌توانید برنامه را ببندید!');
-              setTimeout(() => setTestAlarmMsg(''), 6000);
+              try {
+                const perms = await plugin.checkAlarmPermissions?.();
+                if (perms && !perms.notifications) {
+                  await requestNotificationPermissions();
+                }
+                await plugin.scheduleAlarm({
+                  alarmId: 99999,
+                  title: 'تست آلارم یادتو',
+                  body: 'آلارم پس‌زمینه با موفقیت کار می‌کند!',
+                  triggerAtMs: triggerMs,
+                  soundId: alarmSound,
+                  vibrate: vibration,
+                  itemId: '',
+                  kind: 'event',
+                });
+                try {
+                  const { LocalNotifications } = await import('@capacitor/local-notifications');
+                  await LocalNotifications.schedule({
+                    notifications: [
+                      {
+                        id: 99998,
+                        title: 'تست آلارم یادتو',
+                        body: 'یادآوری آزمایشی پس‌زمینه',
+                        schedule: { at: new Date(triggerMs), allowWhileIdle: true },
+                      },
+                    ],
+                  });
+                } catch {
+                  // ignore secondary fallback
+                }
+                const exactInfo = perms ? (perms.exactAlarm ? 'دقیق ✓' : 'نیاز به مجوز آلارم دقیق!') : '';
+                const notifInfo = perms ? (perms.notifications ? 'اعلان ✓' : 'مجوز اعلان غیرفعال!') : '';
+                setTestAlarmMsg(`آلارم برای ۵ ثانیه دیگر تنظیم شد (${exactInfo} | ${notifInfo}) — برنامه را ببندید!`);
+              } catch (e) {
+                setTestAlarmMsg('خطا در تنظیم آلارم: ' + (e instanceof Error ? e.message : String(e)));
+              }
+              setTimeout(() => setTestAlarmMsg(''), 8000);
             } else {
               setTestAlarmMsg('این قابلیت فقط روی اپلیکیشن اندروید فعال است.');
               setTimeout(() => setTestAlarmMsg(''), 4000);
