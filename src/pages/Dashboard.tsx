@@ -16,6 +16,8 @@ import {
   Bot,
   MapPin,
   Trash2,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -417,18 +419,37 @@ export function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteEvent(ev.id);
-                      }}
-                      className="shrink-0 rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                      title="حذف رویداد"
-                      aria-label="حذف رویداد"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const isOn = (ev.reminder ?? -1) >= 0;
+                          updateEvent(ev.id, { reminder: isOn ? -1 : 0 });
+                        }}
+                        className={`rounded-xl p-2 transition-colors ${
+                          (ev.reminder ?? -1) >= 0
+                            ? 'bg-accent-50 text-accent-600 hover:bg-accent-100'
+                            : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                        }`}
+                        title={(ev.reminder ?? -1) >= 0 ? 'قطع هشدار' : 'فعال کردن هشدار'}
+                        aria-label={(ev.reminder ?? -1) >= 0 ? 'قطع هشدار' : 'فعال کردن هشدار'}
+                      >
+                        {(ev.reminder ?? -1) >= 0 ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteEvent(ev.id);
+                        }}
+                        className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        title="حذف رویداد"
+                        aria-label="حذف رویداد"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

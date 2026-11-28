@@ -1,6 +1,7 @@
-import { Clock, MapPin, Trash2, Pencil } from 'lucide-react';
+import { Clock, MapPin, Trash2, Pencil, Bell, BellOff } from 'lucide-react';
 import type { CalendarEvent } from '@/types/calendar';
 import { toFaDigits } from '@/utils/jalaliDate';
+import { useCalendarStore } from '@/store/calendarStore';
 
 const CATEGORY_COLORS: Record<string, string> = {
   work: '#3157D5',
@@ -46,26 +47,47 @@ export function EventCard({ event, compact, onDelete, onEdit }: EventCardProps) 
             )}
           </div>
         </div>
-        {onDelete && !compact && (
-          <div className="flex shrink-0 items-center gap-1">
-            {onEdit && (
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const isOn = (event.reminder ?? -1) >= 0;
+              useCalendarStore.getState().updateEvent(event.id, {
+                reminder: isOn ? -1 : 0,
+              });
+            }}
+            className={`rounded-lg p-2 transition-colors ${
+              (event.reminder ?? -1) >= 0
+                ? 'bg-accent-50 text-accent-600 hover:bg-accent-100'
+                : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            }`}
+            aria-label={(event.reminder ?? -1) >= 0 ? 'قطع هشدار' : 'فعال کردن هشدار'}
+            title={(event.reminder ?? -1) >= 0 ? 'هشدار فعال است (کلیک برای قطع)' : 'هشدار خاموش است (کلیک برای فعال‌سازی)'}
+          >
+            {(event.reminder ?? -1) >= 0 ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
+          {onDelete && !compact && (
+            <>
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(event)}
+                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-primary-500"
+                  aria-label="ویرایش رویداد"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
               <button
-                onClick={() => onEdit(event)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-primary-500"
-                aria-label="ویرایش رویداد"
+                onClick={() => onDelete(event.id)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                aria-label="حذف رویداد"
               >
-                <Pencil className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </button>
-            )}
-            <button
-              onClick={() => onDelete(event.id)}
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-              aria-label="حذف رویداد"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

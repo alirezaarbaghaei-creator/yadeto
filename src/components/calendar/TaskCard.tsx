@@ -1,6 +1,7 @@
-import { Check, Clock, Trash2, SkipForward, Repeat, Pencil } from 'lucide-react';
+import { Check, Clock, Trash2, SkipForward, Repeat, Pencil, Bell, BellOff } from 'lucide-react';
 import type { Task } from '@/types/calendar';
 import { toFaDigits } from '@/utils/jalaliDate';
+import { useCalendarStore } from '@/store/calendarStore';
 
 const PRIORITY_STYLES: Record<Task['priority'], { dot: string; chip: string; label: string }> = {
   high: { dot: 'bg-red-500', chip: 'bg-red-50 text-red-600', label: 'مهم' },
@@ -77,6 +78,28 @@ export function TaskCard({ task, onToggle, onDelete, onSkip, onEdit }: TaskCardP
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {task.status === 'pending' && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const isOn = (task.reminder ?? -1) >= 0;
+              useCalendarStore.getState().updateTask(task.id, {
+                reminder: isOn ? -1 : 0,
+                ...(!isOn && !task.dueTime ? { dueTime: '09:00' } : {}),
+              });
+            }}
+            className={`rounded-lg p-1.5 transition-colors ${
+              (task.reminder ?? -1) >= 0
+                ? 'bg-primary-50 text-primary-600 hover:bg-primary-100'
+                : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            }`}
+            aria-label={(task.reminder ?? -1) >= 0 ? 'قطع هشدار' : 'فعال کردن هشدار'}
+            title={(task.reminder ?? -1) >= 0 ? 'هشدار فعال است (کلیک برای قطع)' : 'هشدار خاموش است (کلیک برای فعال‌سازی)'}
+          >
+            {(task.reminder ?? -1) >= 0 ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </button>
+        )}
         {onEdit && (
           <button
             onClick={() => onEdit(task)}

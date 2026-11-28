@@ -3,6 +3,7 @@ import { getItem, setItem } from '@/lib/safeStorage';
 import type { CalendarEvent, Task } from '@/types/calendar';
 import { getVisibleTasksForDate, getTodaySchedule } from './schedulingEngine';
 import { formatJalali, getTodayISO, getTodayJalali, toFaDigits } from '@/utils/jalaliDate';
+import { getYadetoStatusPlugin } from '@/services/yadetoStatusPlugin';
 
 const STICKY_NOTIF_KEY = 'YADETO_sticky_status_notif';
 
@@ -23,23 +24,8 @@ export async function syncAndroidStatusAndWidgets(
   if (!isNativeApp()) return;
 
   try {
-    const cap = (window as unknown as {
-      Capacitor?: {
-        Plugins?: {
-          YadetoStatus?: {
-            updateStatus?: (opts: {
-              dateLabel: string;
-              summaryLine: string;
-              detailsText: string;
-              stickyEnabled: boolean;
-            }) => Promise<void>;
-          };
-        };
-      };
-    }).Capacitor;
-
-    const updateStatus = cap?.Plugins?.YadetoStatus?.updateStatus;
-    if (typeof updateStatus !== 'function') return;
+    const plugin = getYadetoStatusPlugin();
+    if (!plugin) return;
 
     const today = getTodayJalali();
     const todayISO = getTodayISO();
@@ -68,7 +54,7 @@ export async function syncAndroidStatusAndWidgets(
       }
     }
 
-    await updateStatus({
+    await plugin.updateStatus({
       dateLabel,
       summaryLine: summaryParts.join(' • '),
       detailsText: detailLines.join('\n'),

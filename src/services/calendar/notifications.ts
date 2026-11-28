@@ -7,6 +7,7 @@
  */
 import { isNativeApp } from '@/lib/capacitor';
 import { getItem, setItem } from '@/lib/safeStorage';
+import { getYadetoStatusPlugin } from '@/services/yadetoStatusPlugin';
 
 const timers = new Map<string, number>();
 const firedKeys = new Set<string>();
@@ -22,33 +23,6 @@ export const ALARM_SOUNDS: { id: AlarmSoundId; label: string; desc: string }[] =
 
 const ALARM_SOUND_KEY = 'YADETO_alarm_sound';
 const ALARM_VIBRATE_KEY = 'YADETO_alarm_vibrate';
-
-function getYadetoStatusPlugin() {
-  if (typeof window === 'undefined') return null;
-  const cap = (window as unknown as {
-    Capacitor?: {
-      Plugins?: {
-        YadetoStatus?: {
-          saveAlarmPrefs?: (opts: { soundId: string; vibrate: boolean }) => Promise<void>;
-          scheduleAlarm?: (opts: {
-            alarmId: number;
-            title: string;
-            body: string;
-            triggerAtMs: number;
-            soundId: string;
-            vibrate: boolean;
-            itemId?: string;
-            kind?: string;
-          }) => Promise<void>;
-          cancelAlarm?: (opts: { alarmId: number }) => Promise<void>;
-          stopActiveAlarm?: () => Promise<void>;
-          consumeCompletedTasks?: () => Promise<{ ids?: string[] }>;
-        };
-      };
-    };
-  }).Capacitor;
-  return cap?.Plugins?.YadetoStatus ?? null;
-}
 
 export function getSavedAlarmSound(): AlarmSoundId {
   const raw = getItem(ALARM_SOUND_KEY);

@@ -4,30 +4,11 @@ import { BellRing, BatteryCharging, AlarmClock, CheckCircle2, ShieldAlert, X } f
 import { isNativeApp } from '@/lib/capacitor';
 import { getItem, setItem } from '@/lib/safeStorage';
 import { requestNotificationPermissions } from '@/services/calendar/notifications';
+import { getYadetoStatusPlugin, type YadetoAlarmPermissions } from '@/services/yadetoStatusPlugin';
 
-interface PermState {
-  notifications: boolean;
-  exactAlarm: boolean;
-  batteryIgnored: boolean;
-  fullScreenIntent: boolean;
-  allGranted: boolean;
-}
+type PermState = YadetoAlarmPermissions;
 
 const DISMISS_KEY = 'YADETO_alarm_perm_prompt_dismissed';
-
-function getPlugin() {
-  const cap = (window as unknown as {
-    Capacitor?: {
-      Plugins?: {
-        YadetoStatus?: {
-          checkAlarmPermissions?: () => Promise<PermState>;
-          requestAlarmPermission?: (opts: { type: string }) => Promise<void>;
-        };
-      };
-    };
-  }).Capacitor;
-  return cap?.Plugins?.YadetoStatus ?? null;
-}
 
 export function AlarmPermissionModal() {
   const [open, setOpen] = useState(false);
@@ -35,7 +16,7 @@ export function AlarmPermissionModal() {
 
   const refreshPerms = useCallback(async () => {
     if (!isNativeApp()) return;
-    const plugin = getPlugin();
+    const plugin = getYadetoStatusPlugin();
     if (!plugin?.checkAlarmPermissions) return;
     try {
       const res = await plugin.checkAlarmPermissions();
@@ -81,7 +62,7 @@ export function AlarmPermissionModal() {
         return;
       }
     }
-    await getPlugin()?.requestAlarmPermission?.({ type });
+    await getYadetoStatusPlugin()?.requestAlarmPermission?.({ type });
   };
 
   if (!open || !perms || perms.allGranted) return null;
