@@ -382,9 +382,13 @@ public final class YadetoStatusHelper {
         );
 
         try {
-            // setAlarmClock is never deferred by Doze mode and works reliably even when app is closed
-            AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent);
-            am.setAlarmClock(clockInfo, pi);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);
+            } else {
+                // setAlarmClock is never deferred by Doze mode and works reliably even when app is closed
+                AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent);
+                am.setAlarmClock(clockInfo, pi);
+            }
         } catch (SecurityException ignored) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi);

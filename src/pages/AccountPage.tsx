@@ -33,6 +33,7 @@ import {
   setStickyStatusEnabled,
   syncAndroidStatusAndWidgets,
 } from '@/services/calendar/androidStatus';
+import { getYadetoStatusPlugin } from '@/services/yadetoStatusPlugin';
 import { useCalendarStore } from '@/store/calendarStore';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
@@ -66,6 +67,7 @@ export function AccountPage() {
   const [alarmSound, setAlarmSound] = useState<AlarmSoundId>(() => getSavedAlarmSound());
   const [vibration, setVibration] = useState<boolean>(() => getAlarmVibrationEnabled());
   const [stickyStatus, setStickyStatus] = useState<boolean>(() => isStickyStatusEnabled());
+  const [testAlarmMsg, setTestAlarmMsg] = useState('');
   const [notifStatus, setNotifStatus] = useState<string>('');
 
   const aiLimit = getAiAssistantLimit();
@@ -389,6 +391,36 @@ export function AccountPage() {
             {stickyStatus ? 'فعال' : 'غیرفعال'}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            const plugin = getYadetoStatusPlugin();
+            if (plugin?.scheduleAlarm) {
+              await plugin.scheduleAlarm({
+                alarmId: 99999,
+                title: 'تست آلارم یادتو',
+                body: 'آلارم پس‌زمینه با موفقیت کار می‌کند!',
+                triggerAtMs: Date.now() + 5000,
+                soundId: alarmSound,
+                vibrate: vibration,
+                itemId: '',
+                kind: 'event',
+              });
+              setTestAlarmMsg('آلارم آزمایشی برای ۵ ثانیه دیگر تنظیم شد — می‌توانید برنامه را ببندید!');
+              setTimeout(() => setTestAlarmMsg(''), 6000);
+            } else {
+              setTestAlarmMsg('این قابلیت فقط روی اپلیکیشن اندروید فعال است.');
+              setTimeout(() => setTestAlarmMsg(''), 4000);
+            }
+          }}
+          className="w-full rounded-xl border border-primary-200 bg-primary-50/70 py-2.5 text-xs font-bold text-primary-700 hover:bg-primary-100 transition-colors"
+        >
+          تست فوری آلارم پس‌زمینه (۵ ثانیه دیگر)
+        </button>
+        {testAlarmMsg && (
+          <p className="text-[11px] font-medium text-emerald-600 text-center">{testAlarmMsg}</p>
+        )}
       </div>
 
       {/* App version */}

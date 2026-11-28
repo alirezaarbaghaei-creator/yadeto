@@ -7,13 +7,16 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
 
 public class YadetoAlarmReceiver extends BroadcastReceiver {
-    private static final String ALARM_CHANNEL_ID = "yadeto_alarm_alerts_v2";
+    private static final String ALARM_CHANNEL_ID = "yadeto_alarm_insistent_v3";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -35,10 +38,7 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
         String itemId = intent.getStringExtra("itemId");
         String kind = intent.getStringExtra("kind");
 
-        // 1. Immediately play native looping alarm ringtone + vibration (no background ForegroundService restriction)
-        YadetoAlarmSoundPlayer.start(context, vibrate);
-
-        // 2. Post high-priority notification in notification shade with Stop & Complete Task buttons
+        // Post system-managed FLAG_INSISTENT alarm notification (keeps ringing in system_server even if app process exits)
         showAlarmNotification(context, alarmId, title, body, soundId, vibrate, itemId, kind);
     }
 
@@ -57,6 +57,10 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
 
         int notifId = alarmId + 2000;
 
+        Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+        if (alarmUri == null) alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        if (alarmUri == null) alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(
                 ALARM_CHANNEL_ID,
@@ -64,8 +68,18 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
                 NotificationManager.IMPORTANCE_HIGH
             );
             ch.setDescription("هشدار و زنگ یادآوری کارها و رویدادها");
-            ch.setSound(null, null); // Sound handled cleanly by YadetoAlarmSoundPlayer so Stop cancels it immediately
-            ch.enableVibration(false);
+            if (alarmUri != null) {
+                AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+                ch.setSound(alarmUri, attrs);
+            }
+            ch.enableVibration(vibrate);
+            if (vibrate) {
+                ch.setVibrationPattern(new long[] { 0, 500, 350, 500, 350 });
+            }
+            ch.setBypassDnd(true);
             ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             nm.createNotificationChannel(ch);
         }
@@ -125,6 +139,7 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setSound(alarmUri)
             .setContentIntent(openPending)
             .setFullScreenIntent(openPending, true)
             .setDeleteIntent(stopPending)
@@ -146,8 +161,11 @@ public class YadetoAlarmReceiver extends BroadcastReceiver {
             builder.addAction(0, "انجام شد ✓", completePending);
         }
 
+        Notification notif = builder.build();
+        notif.flags |= Notification.FLAG_INSISTENT;
+
         try {
-            nm.notify(notifId, builder.build());
+            nm.notify(notifId, notif);
         } catch (SecurityException ignored) {}
     }
 }
